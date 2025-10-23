@@ -72,12 +72,12 @@ for (patient_id in patient_ids) {
     censoring_time <- c(censoring_time, month_censored)
     censoring_index <- c(censoring_index, index_censored)
 }
-edss_data$censoring_time <- censoring_time
-edss_data$censoring_index <- censoring_index
 
 print(paste("number of patients with no observations:", length(which(censoring_index == -1))))
 
-# delete from the dataframe patients with no EDSS observations
+observed_patient_ids <- patient_ids[-which(censoring_index == -1)]
+observed_censoring_time <- censoring_time[-which(censoring_index == -1)]
+observed_censoring_index <- censoring_index[-which(censoring_index == -1)]
 
 # note that the censoring time and the censoring index don't need to match; in the raw data,
 # sometimes months are skipped
@@ -89,4 +89,12 @@ print(paste("number of patients with no observations:", length(which(censoring_i
 #     }
 # }
 
-print(paste("average censoring time:", mean(censoring_time)))
+print(paste("average observed censoring time:", mean(observed_censoring_time)))
+print(paste("median observed censoring time:", median(observed_censoring_time)))
+
+# now get the number of missing values for the edss score prior to censoring for each patient
+num_censored_observations <- 0
+for (patient_id in observed_patient_ids) {
+    cnt <- 0
+    # first count 
+}
