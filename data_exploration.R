@@ -97,6 +97,16 @@ missingness_span_morethan3 <- c()
 # create a vector for patient IDs where the first value is missing
 first_value_missing <- c()
 
+# keep track of baseline EDSS, which is the EDSS score at month 0;
+# note that 17 patients don't have a baseline EDSS, in which case
+# their baseline EDSS is a missing value
+baseline_edss <- c()
+
+# keep track of whether a patient has disease progression, which is denoted as
+# (a) increase of >= 1.0 if baseline EDSS is <= 5.5 or (b) increase of >= 0.5
+# if baseline EDSS is >= 6.0; this will be a vector of binary variables
+disease_progression <- c()
+
 # keep track of an iterating counter
 i <- 1
 for (patient_id in observed_patient_ids) {
@@ -157,6 +167,31 @@ for (patient_id in observed_patient_ids) {
     # see how many people have first value missing
     if (is.na(patient_edss[1])) {
         first_value_missing <- c(first_value_missing, patient_id)
+        baseline_edss <- c(baseline_edss, NA)
+        # if there is no baseline EDSS, then we don't know if their
+        # disease progressed (can change later if needed)
+        disease_progression <- c(disease_progression, NA)
+    } else {
+        baseline_edss <- c(baseline_edss, patient_edss[1])
+        # evaluate if there was disease progression
+        if (patient_edss[1] <= 5.5) threshold <- 1
+        else threshold <- 0.5
+
+        # get only the observed values of EDSS
+        patient_edss_observed <- patient_edss[!is.na(patient_edss)]
+        # 0 means EDSS did not progress, 1 means EDSS did progress
+        progress <- 0
+        # check if EDSS progressed
+        if (length(patient_edss_observed) > 1) {
+            for (j in 1:(length(patient_edss_observed)-1)) {
+                if (patient_edss_observed[j+1] - patient_edss_observed[j] >= threshold) {
+                    progress <- 1
+                    break
+                }
+            }
+        }
+
+        disease_progression <- c(disease_progression, progress)
     }
 
     # see if the current missingness span contains a span greater than 3
@@ -180,3 +215,6 @@ print(paste("average number of missing rows for each patient:", mean(num_missing
 print(paste("average percent of of missing rows for each patient:", mean(percent_missing_observations)))
 print(paste("number of patients with more than 3 consecutive missing values", length(missingness_span_morethan3)))
 print(paste("number of patients with first value missing", length(first_value_missing)))
+print(paste("mean of baseline EDSS, ignoring missing", mean(baseline_edss, na.rm=TRUE)))
+print(paste("median of baseline EDSS, ignoring missing", median(baseline_edss, na.rm=TRUE)))
+print(paste("mean of EDSS disease progression, ignoring missing", mean(disease_progression, na.rm=TRUE)))
