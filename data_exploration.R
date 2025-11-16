@@ -1,6 +1,7 @@
 library(readxl)
 library(stringr)
 
+# read the data
 baseline_data <- data.frame(read_excel("preliminary_longitudinal_data.xlsx", sheet="baseline chars"))
 
 # print number of rows in the data
@@ -16,7 +17,7 @@ print(table(baseline_data$patient_status))
 # get EDSS data
 edss_data <- data.frame(read_excel("preliminary_longitudinal_data.xlsx", sheet="edss"))
 
-# get MSFC data for timed walk and nine hole peg test
+# get MSFC data for timed walk and nine hole peg test data
 msfc_data <- data.frame(read_excel("preliminary_longitudinal_data.xlsx", sheet="msfc"))
 
 # get the patient IDs and print the number of different patients
@@ -32,11 +33,43 @@ print("number of unique site_ids in EDSS data")
 print(length(site_ids))
 
 # convert the FormGroup column to numbers
+# the FormGroup column tells us the month at which the visit was conducted (0, 6, 12, etc.)
 FormGroup_num <- as.integer(word(edss_data$FormGroup, 2))
 edss_data$FormGroup_num <- FormGroup_num
 # do the same for MSFC data
 FormGroup_num <- as.integer(word(msfc_data$FormGroup, 2))
 msfc_data$FormGroup_num <- FormGroup_num
+
+# create a function that takes in a missingness vector and formgroup vector and
+# returns a two value vector containing the month and index at which there is censoring
+compute_censoring_time <- function(is_missing, cur_patient_formgroup_num) {
+    # catch the corner case that there are no observed edss scores,
+    # by counting the number of missing values in the vector is_missing and
+    # comparing it to the length of the vector
+    if (sum(is_missing) == length(is_missing)) {
+        # assign default values of -1
+        month_censored <- -1
+        index_censored <- -1
+    } else {
+        month_censored <- 0
+        # iterate through each index
+        for (i in 1:length(is_missing)) {
+            # if the count of missing values after this index is the same as the
+            # number of values left in the vector, then we are censored after this
+            # also remember the corner case where we're just at the last value of the vector
+            if (i == length(is_missing) | sum(is_missing[(i+1):length(is_missing)]) == length(is_missing)-i) {
+                month_censored <- cur_patient_formgroup_num[i]
+                index_censored <- i
+                break
+            }
+        }    
+    }
+    
+    # create a vector containing the month and index of censoring
+    result <- c(month_censored, index_censored)
+
+    return(result)
+}
 
 # record the censoring time for each patient, which is defined as
 # the time point at which every value after is missing
@@ -52,53 +85,28 @@ censoring_index_nhpt <- c()
 
 # iterate through all of the patients
 for (patient_id in patient_ids) {
+    # first get all of the relevant information for this patient
+
     # get EDSS data for this patient
     cur_patient_data <- edss_data[edss_data$PatientName == patient_id, ]
     cur_patient_edss <- cur_patient_data$total_edss_score
     cur_patient_formgroup_num <- cur_patient_data$FormGroup_num
-
-    # get MSFC data for this patient
-    # note that sometimes observation times for t25fw can be different from
-    # nhpt observation
-    cur_patient_msfc_data <- msfc_data[msfc_data$PatientName == patient_id, ]
-    cur_patient_msfc_formgroup_num <- cur_patient_msfc_data$FormGroup_num
-    cur_patient_t25fw_status <- cur_patient_msfc_data$trial_one_seconds
-    cur_patient_nhpt_status <- cur_patient_msfc_data$dominant_hand_t1_seconds
-    t25fw_is_missing <- as.integer(is.na(cur_patient_t25fw_status))
-    nhpt_is_missing <- as.integer(is.na(cur_patient_nhpt_status))
-
     # get the index at which every recorded value is missing after, i.e. the 
     # censoring time
     # step 1: get a vector of 0s and 1s representing whether the value is missing
     is_missing <- as.integer(is.na(cur_patient_edss))
 
-    # create a function that takes in a missingness vector and formgroup vecotr and
-    # returns 
-    compute_censoring_time <- function(is_missing, cur_patient_formgroup_num) {
-        # catch the corner case that there are no observed edss scores
-        if (sum(is_missing[1:length(is_missing)]) == length(is_missing)) {
-            month_censored <- -1
-            index_censored <- -1
-        } else {
-            month_censored <- 0
-            # step 3: iterate through each index
-            for (i in 1:length(is_missing)) {
-                # if the count of missing values after this index is the same as the
-                # number of values left in the vector, then we are censored after this
-                if (i == length(is_missing) | sum(is_missing[(i+1):length(is_missing)]) == length(is_missing)-i) {
-                    month_censored <- cur_patient_formgroup_num[i]
-                    index_censored <- i
-                    break
-                }
-            }    
-        }
-        
-        # create a vector containing the month and index of censoring
-        result <- c(month_censored, index_censored)
-
-        return(result)
-    }
-
+    # repeat the process for MSFC data
+    # get MSFC data for this patient
+    # note that sometimes observation times for t25fw can be different from
+    # nhpt observation
+    cur_patient_msfc_data <- msfc_data[msfc_data$PatientName == patient_id, ]
+    cur_patient_msfc_formgroup_num <- cur_patient_msfc_data$FormGroup_num
+    cur_patient_t25fw_status <- cur_patient_msfc_data$trial_average_seconds
+    cur_patient_nhpt_status <- cur_patient_msfc_data$dominant_hand_average_seconds
+    t25fw_is_missing <- as.integer(is.na(cur_patient_t25fw_status))
+    nhpt_is_missing <- as.integer(is.na(cur_patient_nhpt_status))
+    
     # compute censoring time for EDSS
     result <- compute_censoring_time(is_missing, cur_patient_formgroup_num)
 
@@ -125,19 +133,23 @@ print(paste("number of patients with no EDSS observations:", length(which(censor
 print(paste("number of patients with no t25fw observations:", length(which(censoring_index_t25fw == -1))))
 print(paste("number of patients with no nhpt observations:", length(which(censoring_index_nhpt == -1))))
 
+# keep track of patients with observed values of EDSS
 observed_patient_ids <- patient_ids[-which(censoring_index == -1)]
 observed_censoring_time <- censoring_time[-which(censoring_index == -1)]
 observed_censoring_index <- censoring_index[-which(censoring_index == -1)]
 
+# keep track of patients with observed values of t25fw
 observed_patient_ids_t25fw <- patient_ids[-which(censoring_index_t25fw == -1)]
-observed_patient_ids_nhpt <- patient_ids[-which(censoring_index_nhpt == -1)]
 observed_censoring_time_t25fw <- censoring_time_t25fw[-which(censoring_index_t25fw == -1)]
 observed_censoring_index_t25fw <- censoring_index_t25fw[-which(censoring_index_t25fw == -1)]
+
+# keep track of patients with observed values of nhpt
+observed_patient_ids_nhpt <- patient_ids[-which(censoring_index_nhpt == -1)]
 observed_censoring_time_nhpt <- censoring_time_nhpt[-which(censoring_index_nhpt == -1)]
 observed_censoring_index_nhpt <- censoring_index_nhpt[-which(censoring_index_nhpt == -1)]
 
-print(paste("average observed censoring time:", mean(observed_censoring_time)))
-print(paste("median observed censoring time:", median(observed_censoring_time)))
+print(paste("average observed censoring time EDSS:", mean(observed_censoring_time)))
+print(paste("median observed censoring time EDSS:", median(observed_censoring_time)))
 
 print(paste("average observed censoring time t25fw:", mean(observed_censoring_time_t25fw)))
 print(paste("median observed censoring time t25fw:", median(observed_censoring_time_t25fw)))
@@ -179,7 +191,7 @@ disease_progression_nhpt <- c()
 
 # keep track of an iterating counter
 i <- 1
-# note here that we are only considering patients with observed data
+# note here that we are only considering patients with observed data for EDSS
 for (patient_id in observed_patient_ids) {
     missing_cnt <- 0
 
@@ -191,14 +203,14 @@ for (patient_id in observed_patient_ids) {
     cur_patient_edss_truncated <- cur_patient_edss[1:observed_censoring_index[i]]
     cur_patient_month_truncated <- cur_patient_formgroup_num[1:observed_censoring_index[i]]
 
-    # create a function that returns a vector of observed values with every interim month filled in
-    create_named_list <- function(i, observed_censoring_index, cur_patient_edss_truncated, 
+    # define a function that returns a vector of observed values with every interim month filled in
+    create_full_vector <- function(censoring_index, cur_patient_value_truncated, 
                                   cur_patient_month_truncated) {
         # create a named list that behaves like a dictionary where the key is the month and the
         # value is the edss value
-        month_edss_dict <- list()
-        for (j in 1:observed_censoring_index[i]) {
-            month_edss_dict[[toString(cur_patient_month_truncated[j])]] <- cur_patient_edss_truncated[j]
+        month_value_dict <- list()
+        for (j in 1:censoring_index) {
+            month_value_dict[[toString(cur_patient_month_truncated[j])]] <- cur_patient_value_truncated[j]
         }
 
         # first fill in any gaps in the months by creating a sequence that inclues every
@@ -207,42 +219,59 @@ for (patient_id in observed_patient_ids) {
         patient_months <- seq(0, last_observed_month, by=6)
         # use the named list to copy over the edss values at each 6 month interval; if a value
         # is not in the named list, then insert a missing value
-        patient_edss <- c()
+        patient_values <- c()
         for (j in 1:length(patient_months)) {
-            if (is.null(month_edss_dict[[toString(patient_months[j])]])) {
-                patient_edss <- c(patient_edss, NA)
+            if (is.null(month_value_dict[[toString(patient_months[j])]])) {
+                patient_edss <- c(patient_values, NA)
             } else {
-                patient_edss <- c(patient_edss, month_edss_dict[[toString(patient_months[j])]])
+                patient_edss <- c(patient_values, month_value_dict[[toString(patient_months[j])]])
             }
         }
 
+        # return the full vector
         return(patient_edss)
     }
 
-    patient_edss <- create_named_list(i, observed_censoring_index, cur_patient_edss_truncated,
+    patient_edss <- create_full_vector(observed_censoring_index[i], cur_patient_edss_truncated,
                                             cur_patient_month_truncated)
 
     # get the spans of missingness, which is a vector of missingness lengths
-    cur_missingness_span <- c()
+    # ex. 1 the vector NA NA 1 1 NA 1 1 NA NA NA 1 will return 2, 1, 3
+    compute_missingness_span <- function(patient_values) {
+        # declare an empty vector to save output
+        cur_missingness_span <- c()
 
-    j <- 1
-    while (j <= length(patient_edss)) {
-        if (is.na(patient_edss[j])) {
-            cnt <- 1
-            # walk forward until we reach something that is observed
-            for (k in (j+1):length(patient_edss)) {
-                if (is.na(patient_edss[k])) {
-                    cnt <- cnt + 1
-                } else {
-                    j <- k
-                    break
+        # declare an iterator that will walk through patient_values
+        j <- 1
+        while (j <= length(patient_values)) {
+            # check if current value is missing
+            if (is.na(patient_values[j])) {
+                cnt <- 1
+                # walk forward until we reach something that is observed
+                for (k in (j+1):length(patient_values)) {
+                    # if the next value is also missing, increment cnt
+                    if (is.na(patient_edss[k])) {
+                        cnt <- cnt + 1
+                    } else {
+                        # otherwise break out of the loop and update iterator
+                        # to where we walked forward to
+                        j <- k
+                        break
+                    }
                 }
+                # add the count of missing values to the missingness span
+                cur_missingness_span <- c(cur_missingness_span, cnt)
+            } else {
+                # if the current value is missing, just walk to the next index
+                # for the iterator
+                j <- j + 1
             }
-            cur_missingness_span <- c(cur_missingness_span, cnt)
-        } else {
-            j <- j + 1
         }
+
+        return(cur_missingness_span)
     }
+
+    cur_missingness_span <- compute_missingness_span(patient_edss)
 
     # see how many people have first value missing
     if (is.na(patient_edss[1])) {
