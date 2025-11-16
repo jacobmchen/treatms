@@ -189,6 +189,71 @@ disease_progression <- c()
 disease_progression_t25fw <- c()
 disease_progression_nhpt <- c()
 
+# define a function that returns a vector of observed values with every interim month filled in
+create_full_vector <- function(censoring_index, cur_patient_value_truncated, 
+                              cur_patient_month_truncated) {
+    # create a named list that behaves like a dictionary where the key is the month and the
+    # value is the edss value
+    month_value_dict <- list()
+    for (j in 1:censoring_index) {
+        month_value_dict[[toString(cur_patient_month_truncated[j])]] <- cur_patient_value_truncated[j]
+    }
+
+    # first fill in any gaps in the months by creating a sequence that inclues every
+    # 6 month interval
+    last_observed_month <- cur_patient_month_truncated[length(cur_patient_month_truncated)]
+    patient_months <- seq(0, last_observed_month, by=6)
+    # use the named list to copy over the edss values at each 6 month interval; if a value
+    # is not in the named list, then insert a missing value
+    patient_values <- c()
+    for (j in 1:length(patient_months)) {
+        if (is.null(month_value_dict[[toString(patient_months[j])]])) {
+            patient_values <- c(patient_values, NA)
+        } else {
+            patient_values <- c(patient_values, month_value_dict[[toString(patient_months[j])]])
+        }
+    }
+
+    # return the full vector
+    return(patient_values)
+}
+
+# get the spans of missingness, which is a vector of missingness lengths
+# ex. 1 the vector NA NA 1 1 NA 1 1 NA NA NA 1 will return 2, 1, 3
+compute_missingness_span <- function(patient_values) {
+    # declare an empty vector to save output
+    cur_missingness_span <- c()
+
+    # declare an iterator that will walk through patient_values
+    j <- 1
+    while (j <= length(patient_values)) {
+        # check if current value is missing
+        if (is.na(patient_values[j])) {
+            cnt <- 1
+            # walk forward until we reach something that is observed
+            for (k in (j+1):length(patient_values)) {
+                # if the next value is also missing, increment cnt
+                if (is.na(patient_edss[k])) {
+                    cnt <- cnt + 1
+                } else {
+                    # otherwise break out of the loop and update iterator
+                    # to where we walked forward to
+                    j <- k
+                    break
+                }
+            }
+            # add the count of missing values to the missingness span
+            cur_missingness_span <- c(cur_missingness_span, cnt)
+        } else {
+            # if the current value is missing, just walk to the next index
+            # for the iterator
+            j <- j + 1
+        }
+    }
+
+    return(cur_missingness_span)
+}
+
 # keep track of an iterating counter
 i <- 1
 # note here that we are only considering patients with observed data for EDSS
@@ -203,77 +268,13 @@ for (patient_id in observed_patient_ids) {
     cur_patient_edss_truncated <- cur_patient_edss[1:observed_censoring_index[i]]
     cur_patient_month_truncated <- cur_patient_formgroup_num[1:observed_censoring_index[i]]
 
-    # define a function that returns a vector of observed values with every interim month filled in
-    create_full_vector <- function(censoring_index, cur_patient_value_truncated, 
-                                  cur_patient_month_truncated) {
-        # create a named list that behaves like a dictionary where the key is the month and the
-        # value is the edss value
-        month_value_dict <- list()
-        for (j in 1:censoring_index) {
-            month_value_dict[[toString(cur_patient_month_truncated[j])]] <- cur_patient_value_truncated[j]
-        }
-
-        # first fill in any gaps in the months by creating a sequence that inclues every
-        # 6 month interval
-        last_observed_month <- cur_patient_month_truncated[length(cur_patient_month_truncated)]
-        patient_months <- seq(0, last_observed_month, by=6)
-        # use the named list to copy over the edss values at each 6 month interval; if a value
-        # is not in the named list, then insert a missing value
-        patient_values <- c()
-        for (j in 1:length(patient_months)) {
-            if (is.null(month_value_dict[[toString(patient_months[j])]])) {
-                patient_edss <- c(patient_values, NA)
-            } else {
-                patient_edss <- c(patient_values, month_value_dict[[toString(patient_months[j])]])
-            }
-        }
-
-        # return the full vector
-        return(patient_edss)
-    }
-
     patient_edss <- create_full_vector(observed_censoring_index[i], cur_patient_edss_truncated,
                                             cur_patient_month_truncated)
 
-    # get the spans of missingness, which is a vector of missingness lengths
-    # ex. 1 the vector NA NA 1 1 NA 1 1 NA NA NA 1 will return 2, 1, 3
-    compute_missingness_span <- function(patient_values) {
-        # declare an empty vector to save output
-        cur_missingness_span <- c()
-
-        # declare an iterator that will walk through patient_values
-        j <- 1
-        while (j <= length(patient_values)) {
-            # check if current value is missing
-            if (is.na(patient_values[j])) {
-                cnt <- 1
-                # walk forward until we reach something that is observed
-                for (k in (j+1):length(patient_values)) {
-                    # if the next value is also missing, increment cnt
-                    if (is.na(patient_edss[k])) {
-                        cnt <- cnt + 1
-                    } else {
-                        # otherwise break out of the loop and update iterator
-                        # to where we walked forward to
-                        j <- k
-                        break
-                    }
-                }
-                # add the count of missing values to the missingness span
-                cur_missingness_span <- c(cur_missingness_span, cnt)
-            } else {
-                # if the current value is missing, just walk to the next index
-                # for the iterator
-                j <- j + 1
-            }
-        }
-
-        return(cur_missingness_span)
-    }
-
     cur_missingness_span <- compute_missingness_span(patient_edss)
 
-    # see how many people have first value missing
+    # compute disease progression
+    # first check if they have a baseline value
     if (is.na(patient_edss[1])) {
         first_value_missing <- c(first_value_missing, patient_id)
         baseline_edss <- c(baseline_edss, NA)
@@ -293,14 +294,21 @@ for (patient_id in observed_patient_ids) {
         # 0 means EDSS did not progress, 1 means EDSS did progress
         progress <- 0
         # check if EDSS progressed
-        if (length(patient_edss_observed) > 1) {
-            for (j in 1:(length(patient_edss_observed)-1)) {
-                if (patient_edss_observed[j+1] - patient_edss_observed[j] >= threshold) {
+        # first check that there is at least two observed values, since
+        # we need to check of sustained progression
+        if (length(patient_edss_observed) > 2) {
+            # iterate through all of the observed values
+            for (j in 1:(length(patient_edss_observed)-2)) {
+                # check if the change is more than the threshold
+                # and if the change is sustained
+                if (patient_edss_observed[j+1] - patient_edss_observed[j] >= threshold & patient_edss_observed[j+2] >= patient_edss_observed[j+1]) {
                     progress <- 1
                     break
                 }
             }
         } else {
+            # if there is only one observed value, we don't know if their disease
+            # progressed
             progress <- NA
         }
 
@@ -335,25 +343,27 @@ print(paste("median of baseline EDSS, ignoring missing", median(baseline_edss, n
 # a value is missing if we didn't have baseline or if there is only one observed value
 print(paste("number of missing values for EDSS progression", sum(is.na(disease_progression))))
 print(paste("mean of EDSS disease progression, ignoring missing", mean(disease_progression, na.rm=TRUE)))
+print(paste("length of disease_progression", length(disease_progression)))
 print("")
+
+# create a dataframe for EDSS progression
+EDSS_progression_df <- data.frame(patient_id=observed_patient_ids,
+                                    EDSS_progression=disease_progression)
 
 # keep track of an iterating counter
 i <- 1
 # note here that we are only considering patients with observed data
+# now do the same for t25fw
 for (patient_id in observed_patient_ids_t25fw) {
     missing_cnt <- 0
 
     cur_patient_msfc_data <- msfc_data[msfc_data$PatientName == patient_id, ]
-    cur_patient_t25fw <- cur_patient_msfc_data$trial_one_seconds
-    # cur_patient_nhpt <- cur_patient_msfc_data$dominant_hand_t1_seconds
+    cur_patient_t25fw <- cur_patient_msfc_data$trial_average_seconds
     cur_patient_msfc_formgroup_num <- cur_patient_msfc_data$FormGroup_num
 
     # get the t25fw and nhpt up to the censored index
     cur_patient_t25fw_truncated <- cur_patient_t25fw[1:observed_censoring_index_t25fw[i]]
     cur_patient_t25fw_month_truncated <- cur_patient_msfc_formgroup_num[1:observed_censoring_index_t25fw[i]]
-
-    # cur_patient_nhpt_truncated <- cur_patient_nhpt[1:observed_censoring_index_nhpt[i]]
-    # cur_patient_nhpt_month_truncated <- cur_patient_msfc_formgroup_num[1:observed_censoring_index_nhpt[i]]
 
     # create a function that returns a vector of observed values with every interim month filled in
     create_named_list <- function(i, observed_censoring_index, cur_patient_edss_truncated, 
