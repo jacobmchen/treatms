@@ -382,7 +382,7 @@ msfc_progression <- function(patient_values, patient_months) {
     }
 
     # there was no disease progression
-    return(0)
+    return(Inf)
 }
 
 # keep track of an iterating counter
@@ -390,78 +390,104 @@ i <- 1
 # note here that we are only considering patients with observed data
 # now do the same for t25fw
 for (patient_id in observed_patient_ids_t25fw) {
-    missing_cnt <- 0
-
+    # get the patient's t25fw data
     cur_patient_msfc_data <- msfc_data[msfc_data$PatientName == patient_id, ]
     cur_patient_t25fw <- cur_patient_msfc_data$trial_average_seconds
     cur_patient_msfc_formgroup_num <- cur_patient_msfc_data$FormGroup_num
 
-    # get the t25fw and nhpt up to the censored index
+    # get the t25fw and months data up to the censored index
     cur_patient_t25fw_truncated <- cur_patient_t25fw[1:observed_censoring_index_t25fw[i]]
     cur_patient_t25fw_month_truncated <- cur_patient_msfc_formgroup_num[1:observed_censoring_index_t25fw[i]]
 
+    # create a vector of the t25fw data with missing months filled in
     patient_t25fw <- create_full_vector(observed_censoring_index_t25fw[i], cur_patient_t25fw_truncated,
                                             cur_patient_t25fw_month_truncated)
 
+    # create a vector corresponding to the full vector of the months that the data corresponds to
     last_observed_month <- cur_patient_t25fw_month_truncated[length(cur_patient_t25fw_month_truncated)]
     patient_months <- seq(0, last_observed_month, by=6)
+
+    # compute whether the patient had disease progression and when
     disease_progression_t25fw <- c(disease_progression_t25fw, msfc_progression(patient_t25fw, patient_months))
 
     i <- i + 1
 }
 print(paste("number of missing values in disease progression of t25fw", sum(is.na(disease_progression_t25fw))))
-print(paste("mean of disease progression of t25fw", mean(disease_progression_t25fw, na.rm=TRUE)))
+disease_progression_t25fw_no_inf <- ifelse(is.infinite(disease_progression_t25fw), NA, disease_progression_t25fw)
+print(paste("mean of disease progression of t25fw, no missing, ignore no progression", mean(disease_progression_t25fw_no_inf, na.rm=TRUE)))
+print(paste("number of patients with t25fw disease progression", sum(!is.na(disease_progression_t25fw_no_inf))))
 print("")
 
 # create a dataframe for t25fw progression
 t25fw_progression_df <- data.frame(patient_id=observed_patient_ids_t25fw,
-                                    EDSS_progression=disease_progression_t25fw)
+                                    t25fw_progression=disease_progression_t25fw)
+
+# declare an empty vector to keep track of nhpt disease progression
+disease_progression_nhpt <- c()
 
 # keep track of an iterating counter
 i <- 1
 # note here that we are only considering patients with observed data
 for (patient_id in observed_patient_ids_nhpt) {
-    missing_cnt <- 0
-
+    # get the patient's nhpt data
     cur_patient_msfc_data <- msfc_data[msfc_data$PatientName == patient_id, ]
-    cur_patient_nhpt <- cur_patient_msfc_data$dominant_hand_t1_seconds
+    cur_patient_nhpt <- cur_patient_msfc_data$dominant_hand_average_seconds
     cur_patient_msfc_formgroup_num <- cur_patient_msfc_data$FormGroup_num
 
-    # get the t25fw and nhpt up to the censored index
-    cur_patient_nhpt_truncated <- as.double(cur_patient_nhpt[1:observed_censoring_index_nhpt[i]])
+    # get the nhpt up to the censored index
+    cur_patient_nhpt_truncated <- cur_patient_nhpt[1:observed_censoring_index_nhpt[i]]
     cur_patient_nhpt_month_truncated <- cur_patient_msfc_formgroup_num[1:observed_censoring_index_nhpt[i]]
 
+    # create a vector of the nhpt data with missing months filled in
     patient_nhpt <- create_full_vector(observed_censoring_index_nhpt[i], cur_patient_nhpt_truncated,
                                             cur_patient_nhpt_month_truncated)
 
-    # see how many people have first value missing
-    if (is.na(patient_nhpt[1])) {
-        # if there is no baseline EDSS, then we don't know if their
-        # disease progressed (can change later if needed)
-        disease_progression_nhpt <- c(disease_progression_nhpt, NA)
-    } else {
-        # get only the observed values of nhpt
-        # note: this implementation may not be exactly correct since I'm
-        # only looking at observed values of EDSS
-        patient_nhpt_observed <- patient_nhpt[!is.na(patient_nhpt)]
-        # 0 means nhpt did not progress, 1 means EDSS did progress
-        progress <- 0
-        # check if nhpt progressed
-        if (length(patient_nhpt_observed) > 1) {
-            for (j in 1:(length(patient_nhpt_observed)-1)) {
-                if (patient_nhpt_observed[j+1] - patient_nhpt_observed[j] >= 0.2*patient_nhpt_observed[j]) {
-                    progress <- 1
-                    break
-                }
-            }
-        } else {
-            progress <- NA
-        }
+    # create a vector corresponding to the full vector of the months that the data corresponds to
+    last_observed_month <- cur_patient_nhpt_month_truncated[length(cur_patient_nhpt_month_truncated)]
+    patient_months <- seq(0, last_observed_month, by=6)
 
-        disease_progression_nhpt <- c(disease_progression_nhpt, progress)
-    }
+    # compute whether the patient had disease progression and when
+    disease_progression_nhpt <- c(disease_progression_nhpt, msfc_progression(patient_nhpt, patient_months))
 
     i <- i + 1
 }
 print(paste("number of missing values in disease progression of nhpt", sum(is.na(disease_progression_nhpt))))
-print(paste("mean of disease progression of nhpt", mean(disease_progression_nhpt, na.rm=TRUE)))
+disease_progression_nhpt_no_inf <- ifelse(is.infinite(disease_progression_nhpt), NA, disease_progression_nhpt)
+print(paste("mean of disease progression of nhpt", mean(disease_progression_nhpt_no_inf, na.rm=TRUE)))
+print(paste("number of patients with nhpt disease progression", sum(!is.na(disease_progression_nhpt_no_inf))))
+print("")
+
+# create a dataframe for nhpt progression
+nhpt_progression_df <- data.frame(patient_id=observed_patient_ids_nhpt,
+                                    nhpt_progression=disease_progression_nhpt)
+
+# merge the three dataframes of EDSS, t25fw, and nhpt disease progression
+merged_progression_df <- merge(EDSS_progression_df, t25fw_progression_df, by="patient_id", all=TRUE)
+merged_progression_df <- merge(merged_progression_df, nhpt_progression_df, by="patient_id", all=TRUE)
+
+# compute the final progression metric defined as the minimum of the three progression
+# metrics; if all three metrics are NA then so is the final progression metric
+combined_progression <- c()
+for (i in 1:nrow(merged_progression_df)) {
+    # get the current patient's row
+    cur_patient <- merged_progression_df[i,]
+
+    # create a vector of 3 values with each progression value
+    progression_values <- c(cur_patient$EDSS_progression,
+                            cur_patient$t25fw_progression,
+                            cur_patient$nhpt_progression)
+
+    # if all three values are NA, then we don't know whether this patient progressed
+    if (sum(is.na(progression_values)) == 3) {
+        combined_progression <- c(combined_progression, NA)
+    } else {
+        # otherwise their progression value is the min, ignoring missingness
+        combined_progression <- c(combined_progression, min(progression_values, na.rm=TRUE))
+    }
+}
+
+merged_progression_df$combined_progression <- combined_progression
+print(paste("number of patients with missing values in combined progression", sum(is.na(combined_progression))))
+combined_progression_no_inf <- ifelse(is.infinite(combined_progression), NA, combined_progression)
+print(paste("number of patients with combined progression, ignore missing", sum(!is.na(combined_progression_no_inf))))
+print(paste("mean of combined progression, ignore missing, ignore no progression", mean(combined_progression_no_inf, na.rm=TRUE)))
