@@ -184,11 +184,22 @@ baseline_edss <- c()
 # if baseline EDSS is >= 6.0; this will be a vector of binary variables
 disease_progression <- c()
 
+# keep track of patients that have unsustained disease progression
+patient_unsustained_progression <- c()
+
+# keep track of amongst progression how many missing values are between
+# the significant change and the sustained change
+progress_missing_vals_between <- c()
+
 # keep track of whether a patient has disease progression with respect to
 # timed 25 foot walk or nine hole peg test. disease progression is defined
 # as an increase of 20% or more between 6 months
 disease_progression_t25fw <- c()
+patient_t25fw_unsustained_progression <- c()
+progress_t25fw_missing_vals_between <- c()
 disease_progression_nhpt <- c()
+patient_nhpt_unsustained_progression <- c()
+progress_nhpt_missing_vals_between <- c()
 
 # define a function that returns a vector of observed values with every interim month filled in
 create_full_vector <- function(censoring_index, cur_patient_value_truncated, 
@@ -287,13 +298,12 @@ for (patient_id in observed_patient_ids) {
         disease_progression <- c(disease_progression, NA)
     } else {
         baseline_edss <- c(baseline_edss, patient_edss[1])
+        baseline <- patient_edss[1]
         # evaluate if there was disease progression
         if (patient_edss[1] <= 5.5) threshold <- 1
         else threshold <- 0.5
 
         # get only the observed values of EDSS
-        # note: this implementation may not be exactly correct since I'm
-        # only looking at observed values of EDSS
         patient_edss_observed <- patient_edss[!is.na(patient_edss)]
         patient_months_observed <- patient_months[!is.na(patient_edss)]
 
@@ -304,12 +314,20 @@ for (patient_id in observed_patient_ids) {
         # we need to check of sustained progression
         if (length(patient_edss_observed) > 2) {
             # iterate through all of the observed values
-            for (j in 1:(length(patient_edss_observed)-2)) {
+            for (j in 2:(length(patient_edss_observed)-1)) {
                 # check if the change is more than the threshold
                 # and if the change is sustained
-                if (patient_edss_observed[j+1] - patient_edss_observed[j] >= threshold & patient_edss_observed[j+2] >= patient_edss_observed[j+1]) {
-                    progress <- patient_months_observed[j+2]
+                if (patient_edss_observed[j] - baseline >= threshold & patient_edss_observed[j+1] - baseline >= threshold) {
+                    progress <- patient_months_observed[j]
                     break
+                }
+            }
+
+            # evaluate how often patients have disease progression that is
+            # not sustained
+            for (j in 2:(length(patient_edss_observed)-1)) {
+                if (patient_edss_observed[j] - baseline >= threshold & patient_edss_observed[j+1] - baseline < threshold) {
+                    patient_unsustained_progression <- c(patient_unsustained_progression, patient_id)
                 }
             }
         } else {
@@ -319,6 +337,19 @@ for (patient_id in observed_patient_ids) {
         }
 
         disease_progression <- c(disease_progression, progress)
+
+        # amongst people who have disease progression, how many people have
+        # one missing value between progression and sustainment? two
+        # missing values? three or more missing values?
+        if (!is.na(progress) & !is.infinite(progress)) {
+            progress_index <- which(patient_months == progress)
+
+            # from the progress_index, get the index of the next observed value
+            patient_edss_after_progression <- patient_edss[(progress_index+1):length(patient_edss)]
+            first_observed_index <- which(is.na(patient_edss_after_progression) == FALSE)[1]
+
+            progress_missing_vals_between <- c(progress_missing_vals_between, first_observed_index-1)
+        }
     }
 
     # see if the current missingness span contains a span greater than 3
@@ -356,11 +387,67 @@ disease_progression_no_inf <- ifelse(is.infinite(disease_progression), NA, disea
 print(paste("mean of EDSS disease progression, ignoring missing, ignoring no progression", mean(disease_progression_no_inf, na.rm=TRUE)))
 print(paste("number of patients with disease progression", sum(!is.na(disease_progression_no_inf))))
 print(paste("length of disease_progression", length(disease_progression)))
+print(paste("number of patients that experience unsustained disease progression", length(unique(patient_unsustained_progression))))
+print(paste("total number of times we observe unsustained disease progression (1 patient may have multiple observations)", length(patient_unsustained_progression)))
+print(paste("among those with disease progression, number with 1 missing value between progression and sustained progression", sum(progress_missing_vals_between == 1)))
+print(paste("among those with disease progression, number with 2 missing values between progression and sustained progression", sum(progress_missing_vals_between == 2)))
+print(paste("among those with disease progression, number with 3+ missing values between progression and sustained progression", sum(progress_missing_vals_between >= 3)))
 print("")
 
 # create a dataframe for EDSS progression
 EDSS_progression_df <- data.frame(patient_id=observed_patient_ids,
                                     EDSS_progression=disease_progression)
+
+# define a function that returns how many times a patient experiences
+# unsustained disease progression (they have a significant change but the 
+# following observation is not significant)
+msfc_unsustained_progression <- function(patient_values, patient_months) {
+    # get only the observed values of patient values
+    patient_values_observed <- patient_values[!is.na(patient_values)]
+    patient_months_observed <- patient_months[!is.na(patient_months)]
+
+    # if the baseline value is missing, then return 0 since we cannot
+    # calculate unsustained progression for this patient
+    if (is.na(patient_values[1])) {
+        return(0)
+    }
+
+    # get the baseline measurement
+    baseline <- patient_values[1]
+
+    # keep track of a counter
+    cnt <- 0
+    # count the number of times there was unsustained disease progression
+    if (length(patient_values_observed) > 2) {
+        for (j in 2:(length(patient_values_observed)-1)) {
+            # check if there is an at least 20% increase in value and 
+            # check whether that increase was sustained at the next observed value
+            if (patient_values_observed[j] >= 1.2*baseline &
+                patient_values_observed[j+1] < 1.2*baseline) {
+                cnt <- cnt + 1
+            }
+        }
+    } 
+
+    # return the number of times there was unsustained
+    # disease progression
+    return(cnt)
+}
+
+# for patients with msfc progression, compute the number of missing values
+# between the observed progression and observed sustainment
+msfc_missing_values_between <- function(patient_values, patient_months, progress) {
+    # amongst people who have disease progression, how many people have
+    # one missing value between progression and sustainment? two
+    # missing values? three or more missing values?
+    progress_index <- which(patient_months == progress)
+
+    # from the progress_index, get the index of the next observed value
+    patient_values_after_progression <- patient_values[(progress_index+1):length(patient_values)]
+    first_observed_index <- which(is.na(patient_values_after_progression) == FALSE)[1]
+
+    return(first_observed_index-1)
+}
 
 # define a function that returns Inf, month of progression, or NA for whether a patient had disease progression
 # for an MSFC score
@@ -369,16 +456,24 @@ msfc_progression <- function(patient_values, patient_months) {
     patient_values_observed <- patient_values[!is.na(patient_values)]
     patient_months_observed <- patient_months[!is.na(patient_months)]
 
+    # if the baseline value is missing, then return NA
+    if (is.na(patient_values[1])) {
+        return(NA)
+    }
+
+    # get the baseline measurement
+    baseline <- patient_values[1]
+
     # check if there was progression for this MSFC metric
     # first check if there are at least two values that are observed
     # since we need to check whether progression was sustained
     if (length(patient_values_observed) > 2) {
-        for (j in 1:(length(patient_values_observed)-2)) {
+        for (j in 2:(length(patient_values_observed)-1)) {
             # check if there is an at least 20% increase in value and 
             # check whether that increase was sustained at the next observed value
-            if (patient_values_observed[j+1] >= 1.2*patient_values_observed[j] &
-                patient_values_observed[j+2] >= patient_values_observed[j+1]) {
-                return(patient_months[j+2])
+            if (patient_values_observed[j] >= 1.2*baseline &
+                patient_values_observed[j+1] >= 1.2*baseline) {
+                return(patient_months[j])
             }
         }
     } else {
@@ -413,7 +508,17 @@ for (patient_id in observed_patient_ids_t25fw) {
     patient_months <- seq(0, last_observed_month, by=6)
 
     # compute whether the patient had disease progression and when
-    disease_progression_t25fw <- c(disease_progression_t25fw, msfc_progression(patient_t25fw, patient_months))
+    progress <- msfc_progression(patient_t25fw, patient_months)
+    disease_progression_t25fw <- c(disease_progression_t25fw, progress)
+    unsustained_count <- msfc_unsustained_progression(patient_t25fw, patient_months)
+    while (unsustained_count > 0) {
+        patient_t25fw_unsustained_progression <- c(patient_t25fw_unsustained_progression, patient_id)
+        unsustained_count <- unsustained_count - 1
+    }
+
+    if (!is.na(progress) & !is.infinite(progress)) {
+        progress_t25fw_missing_vals_between <- c(progress_t25fw_missing_vals_between, msfc_missing_values_between(patient_t25fw, patient_months, progress))
+    }
 
     i <- i + 1
 }
@@ -421,6 +526,10 @@ print(paste("number of missing values in disease progression of t25fw", sum(is.n
 disease_progression_t25fw_no_inf <- ifelse(is.infinite(disease_progression_t25fw), NA, disease_progression_t25fw)
 print(paste("mean of disease progression of t25fw, no missing, ignore no progression", mean(disease_progression_t25fw_no_inf, na.rm=TRUE)))
 print(paste("number of patients with t25fw disease progression", sum(!is.na(disease_progression_t25fw_no_inf))))
+print(paste("number of patients with t25fw unsustained progression", length(unique(patient_t25fw_unsustained_progression))))
+print(paste("among those with t25fw disease progression, number with 1 missing value between progression and sustained progression", sum(progress_t25fw_missing_vals_between == 1)))
+print(paste("among those with t25fw disease progression, number with 2 missing values between progression and sustained progression", sum(progress_t25fw_missing_vals_between == 2)))
+print(paste("among those with t25fw disease progression, number with 3+ missing values between progression and sustained progression", sum(progress_t25fw_missing_vals_between >= 3)))
 print("")
 
 # create a dataframe for t25fw progression
@@ -452,7 +561,17 @@ for (patient_id in observed_patient_ids_nhpt) {
     patient_months <- seq(0, last_observed_month, by=6)
 
     # compute whether the patient had disease progression and when
-    disease_progression_nhpt <- c(disease_progression_nhpt, msfc_progression(patient_nhpt, patient_months))
+    progress <- msfc_progression(patient_nhpt, patient_months)
+    disease_progression_nhpt <- c(disease_progression_nhpt, progress)
+    unsustained_count <- msfc_unsustained_progression(patient_nhpt, patient_months)
+    while (unsustained_count > 0) {
+        patient_nhpt_unsustained_progression <- c(patient_nhpt_unsustained_progression, patient_id)
+        unsustained_count <- unsustained_count - 1
+    }
+
+    if (!is.na(progress) & !is.infinite(progress)) {
+        progress_nhpt_missing_vals_between <- c(progress_nhpt_missing_vals_between, msfc_missing_values_between(patient_nhpt, patient_months, progress))
+    }
 
     i <- i + 1
 }
@@ -460,6 +579,10 @@ print(paste("number of missing values in disease progression of nhpt", sum(is.na
 disease_progression_nhpt_no_inf <- ifelse(is.infinite(disease_progression_nhpt), NA, disease_progression_nhpt)
 print(paste("mean of disease progression of nhpt", mean(disease_progression_nhpt_no_inf, na.rm=TRUE)))
 print(paste("number of patients with nhpt disease progression", sum(!is.na(disease_progression_nhpt_no_inf))))
+print(paste("number of patients with nhpt unsustained progression", length(unique(patient_nhpt_unsustained_progression))))
+print(paste("among those with nhpt disease progression, number with 1 missing value between progression and sustained progression", sum(progress_nhpt_missing_vals_between == 1)))
+print(paste("among those with nhpt disease progression, number with 2 missing values between progression and sustained progression", sum(progress_nhpt_missing_vals_between == 2)))
+print(paste("among those with nhpt disease progression, number with 3+ missing values between progression and sustained progression", sum(progress_nhpt_missing_vals_between >= 3)))
 print("")
 
 # create a dataframe for nhpt progression
