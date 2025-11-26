@@ -191,15 +191,22 @@ patient_unsustained_progression <- c()
 # the significant change and the sustained change
 progress_missing_vals_between <- c()
 
+# keep track of which patients have less than 3 observed values,
+# preventing us from computing disease progression
+patient_less_than_three <- c()
+
 # keep track of whether a patient has disease progression with respect to
 # timed 25 foot walk or nine hole peg test. disease progression is defined
 # as an increase of 20% or more between 6 months
 disease_progression_t25fw <- c()
 patient_t25fw_unsustained_progression <- c()
 progress_t25fw_missing_vals_between <- c()
+patient_t25fw_less_than_three <- c()
+
 disease_progression_nhpt <- c()
 patient_nhpt_unsustained_progression <- c()
 progress_nhpt_missing_vals_between <- c()
+patient_nhpt_less_than_three <- c()
 
 # define a function that returns a vector of observed values with every interim month filled in
 create_full_vector <- function(censoring_index, cur_patient_value_truncated, 
@@ -334,6 +341,9 @@ for (patient_id in observed_patient_ids) {
             # if there is only one observed value, we don't know if their disease
             # progressed
             progress <- NA
+
+            # save the patient ids with less than three observed values
+            patient_less_than_three <- c(patient_less_than_three, patient_id)
         }
 
         disease_progression <- c(disease_progression, progress)
@@ -392,6 +402,7 @@ print(paste("total number of times we observe unsustained disease progression (1
 print(paste("among those with disease progression, number with 1 missing value between progression and sustained progression", sum(progress_missing_vals_between == 1)))
 print(paste("among those with disease progression, number with 2 missing values between progression and sustained progression", sum(progress_missing_vals_between == 2)))
 print(paste("among those with disease progression, number with 3+ missing values between progression and sustained progression", sum(progress_missing_vals_between >= 3)))
+saveRDS(patient_less_than_three, file = "patient_less_than_three_edss.RDS")
 print("")
 
 # create a dataframe for EDSS progression
@@ -447,6 +458,16 @@ msfc_missing_values_between <- function(patient_values, patient_months, progress
     first_observed_index <- which(is.na(patient_values_after_progression) == FALSE)[1]
 
     return(first_observed_index-1)
+}
+
+msfc_less_than_3 <- function(patient_values) {
+    patient_values_observed <- patient_values[!is.na(patient_values)]
+
+    if (length(patient_values_observed) > 2) {
+        return(TRUE)
+    } else {
+        return(FALSE)
+    }
 }
 
 # define a function that returns Inf, month of progression, or NA for whether a patient had disease progression
@@ -520,6 +541,10 @@ for (patient_id in observed_patient_ids_t25fw) {
         progress_t25fw_missing_vals_between <- c(progress_t25fw_missing_vals_between, msfc_missing_values_between(patient_t25fw, patient_months, progress))
     }
 
+    if (msfc_less_than_3(patient_t25fw)) {
+        patient_t25fw_less_than_three <- c(patient_t25fw_less_than_three, patient_id)
+    }
+
     i <- i + 1
 }
 print(paste("number of missing values in disease progression of t25fw", sum(is.na(disease_progression_t25fw))))
@@ -530,6 +555,7 @@ print(paste("number of patients with t25fw unsustained progression", length(uniq
 print(paste("among those with t25fw disease progression, number with 1 missing value between progression and sustained progression", sum(progress_t25fw_missing_vals_between == 1)))
 print(paste("among those with t25fw disease progression, number with 2 missing values between progression and sustained progression", sum(progress_t25fw_missing_vals_between == 2)))
 print(paste("among those with t25fw disease progression, number with 3+ missing values between progression and sustained progression", sum(progress_t25fw_missing_vals_between >= 3)))
+saveRDS(patient_t25fw_less_than_three, file = "patient_less_than_three_t25fw.RDS")
 print("")
 
 # create a dataframe for t25fw progression
@@ -573,6 +599,10 @@ for (patient_id in observed_patient_ids_nhpt) {
         progress_nhpt_missing_vals_between <- c(progress_nhpt_missing_vals_between, msfc_missing_values_between(patient_nhpt, patient_months, progress))
     }
 
+    if (msfc_less_than_3(patient_nhpt)) {
+        patient_nhpt_less_than_three <- c(patient_nhpt_less_than_three, patient_id)
+    }
+
     i <- i + 1
 }
 print(paste("number of missing values in disease progression of nhpt", sum(is.na(disease_progression_nhpt))))
@@ -583,6 +613,7 @@ print(paste("number of patients with nhpt unsustained progression", length(uniqu
 print(paste("among those with nhpt disease progression, number with 1 missing value between progression and sustained progression", sum(progress_nhpt_missing_vals_between == 1)))
 print(paste("among those with nhpt disease progression, number with 2 missing values between progression and sustained progression", sum(progress_nhpt_missing_vals_between == 2)))
 print(paste("among those with nhpt disease progression, number with 3+ missing values between progression and sustained progression", sum(progress_nhpt_missing_vals_between >= 3)))
+saveRDS(patient_nhpt_less_than_three, file = "patient_less_than_three_nhpt.RDS")
 print("")
 
 # create a dataframe for nhpt progression
