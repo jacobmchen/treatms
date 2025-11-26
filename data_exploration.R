@@ -169,6 +169,7 @@ missingness_spans <- list()
 
 # create a vector for storing patient IDs where there is a missingness span of more than 3
 missingness_span_morethan3 <- c()
+missingness_span_morethan2 <- c()
 
 # create a vector for patient IDs where the first value is missing
 first_value_missing <- c()
@@ -325,6 +326,9 @@ for (patient_id in observed_patient_ids) {
         if (max(cur_missingness_span) > 3) {
             missingness_span_morethan3 <- c(missingness_span_morethan3, patient_id)
         }
+        if (max(cur_missingness_span) > 2) {
+            missingness_span_morethan2 <- c(missingness_span_morethan2, patient_id)
+        }
     }
 
     # save the missingness spans in a list
@@ -340,6 +344,7 @@ for (patient_id in observed_patient_ids) {
 print(paste("average number of missing rows for each patient:", mean(num_missing_observations)))
 print(paste("average percent of missing rows for each patient:", mean(percent_missing_observations)))
 print(paste("number of patients with more than 3 consecutive missing values", length(missingness_span_morethan3)))
+print(paste("number of patients with more than 2 consecutive missing values", length(missingness_span_morethan2)))
 # missing EDSS values are not bookended by observed values if and only if there is no
 # observed first value since we are only considering up until the censoring timepoint
 print(paste("number of patients with first value missing", length(first_value_missing)))
