@@ -43,6 +43,8 @@ transformData <- function(df, freq.time){
     n <- dim(df)[1]
     K <- max(df$T)
 
+    # m goes from 1 to the max observed timepoint n times, once for
+    # each individual
     m <- rep(1:K, n)
     Lm <- Rm <- rep(NA, n*K)
     Im <- Jm <- 1*(m == 1)
@@ -50,11 +52,20 @@ transformData <- function(df, freq.time){
     ## Note: R and J are lagged with respect to definitions in the paper.
 
     for(t in 1:K){
+        # R_t is 1 when the censoring indicator is 0 (unobserved) and T=t
         Rm[m == t] <- (1 - df$D) * (df$T == t)
+        # L_t is 1 when the censoring indicator is 1 (observed) and T=t
         Lm[m == t] <- df$D * (df$T == t)
+        # I_t is 1 when T >= t, which ensures that (R_1, L_1) through (R_{t-1}, L_{t-1}) are all 0
         Im[m == t] <- (df$T >= t)
+        # J_t is 1 when (if the censoring indicator is 1) T > t or when (if the censoring
+        # indicator is 0) T >= t
         Jm[m == t] <- (df$T > t) * df$D + (df$T >= t) * (1 - df$D)
     }
+
+    # we have to cast df as a data.frame first or else R throws an error when
+    # trying to make copies of the dataframe using the gl function
+    df <- data.frame(df)
 
     data <- data.frame(df[gl(n, K), ], m = m, Im, Jm, Rm, Lm)
 
