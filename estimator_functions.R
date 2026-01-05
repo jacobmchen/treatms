@@ -4,6 +4,9 @@
 # Elizabeth Colantuoni, Daniel F. Hanley, and Michael Rosenblum.
 ###
 
+# need to import the glm2 package since this file uses it
+library(glm2)
+
 #' Bound a vector of probabilities in [r, 1 - r] for r > 0
 #'
 #' @param x Vector of probabilities
@@ -232,11 +235,17 @@ tmle <- function(data, tau){
     DT <- with(data, tapply(Im * (A*Z1 - (1-A)*Z0) * (Lm - h), id, sum))
     DW1 <- with(data, rowSums(St1[m==1, 1:(tau-1)]))
     DW0 <- with(data, rowSums(St0[m==1, 1:(tau-1)]))
-    theta1 <- 1 + mean(DW1)
-    theta0 <- 1 + mean(DW0)
+    # in the following two lines, I added na.rm=TRUE so that taking the
+    # mean even with missing values will not result in theta1 and theta2
+    # being NA
+    theta1 <- 1 + mean(DW1, na.rm=TRUE)
+    theta0 <- 1 + mean(DW0, na.rm=TRUE)
     theta <- theta1 - theta0
     D <- DT + DW1 - DW0 - theta
-    sdn <- sqrt(var(D) / n)
+    # in the var() function below, I added na.rm=TRUE so that taking
+    # the variance of the vector D will not be NA even if it has
+    # NA values
+    sdn <- sqrt(var(D, na.rm=TRUE) / n)
 
     return(list(theta = c(theta0, theta1), sdn = sdn))
 

@@ -58,31 +58,52 @@ data <- colon %>% dummy_cols(select_columns=c("differ", "extent")) %>% # one-hot
   rename(T = time, D = status) # rename the column time as T and censoring status as D (D is the
                                # censoring indicator, representing Delta)
 
+print(head(data.frame(data)))
+
 # the second parameter divides the time by 30, converting the unit from number of days to 
 # number of months
 dlong <- transformData(data, 30)
 
 # fit initial estimators
+# fit a model for p(L_m=1 | I_m=1, A=a, W=w)
+# the A * (...) notation means that we include each of the main effects
+# inside the parantheses and A as well as all interaction terms between A and
+# those variables
 fitL <- glm(Lm ~ A * (m + sex + age + obstruct + perfor + adhere + nodes + D +
-                        differ1 + differ2 + differ3 + differNA + extent1 + extent2 +
-                        extent3 + extent4 + surg + node4 + etype),
+                        differ_1 + differ_2 + differ_3 + differ_NA + extent_1 + extent_2 +
+                        extent_3 + extent_4 + surg + node4 + etype),
             data = dlong, subset = Im == 1, family = binomial())
+# fit a model for p(R_m=1 | J-m=1, A=a, W=w)
 fitR <- glm(Rm ~ A * (m + sex + age + obstruct + perfor + adhere + nodes + D +
-                        differ1 + differ2 + differ3 + differNA + extent1 + extent2 +
-                        extent3 + extent4 + surg + node4 + etype),
+                        differ_1 + differ_2 + differ_3 + differ_NA + extent_1 + extent_2 +
+                        extent_3 + extent_4 + surg + node4 + etype),
             data = dlong, subset = Jm == 1, family = binomial())
+# fit a model for p(A=a | W=w)
 fitA <- glm(A ~ sex + age + obstruct + perfor + adhere + nodes + D +
-              differ1 + differ2 + differ3 + differNA + extent1 + extent2 +
-              extent3 + extent4 + surg + node4 + etype,
+              differ_1 + differ_2 + differ_3 + differ_NA + extent_1 + extent_2 +
+              extent_3 + extent_4 + surg + node4 + etype,
             data = dlong, subset = m == 1, family = binomial())
 
-# dlong <- mutate(dlong,
-#                 gR1 = bound01(predict(fitR, newdata = mutate(dlong, A = 1), type = 'response')),
-#                 gR0 = bound01(predict(fitR, newdata = mutate(dlong, A = 0), type = 'response')),
-#                 h1 = bound01(predict(fitL, newdata = mutate(dlong, A = 1), type = 'response')),
-#                 h0 = bound01(predict(fitL, newdata = mutate(dlong, A = 0), type = 'response')),
-#                 gA1 = bound01(predict(fitA, newdata = mutate(dlong, A = 1), type = 'response')))
-#
-# tau <- max(dlong$m)
-#
-# tmle(dlong, tau)
+# add 5 additional columns to the dlong dataset
+# first column is predictions for R_m when the the treatment is always 1
+# second column is predictions for R_m when the treatment is always 0
+# third column is predictions for L_m when the the treatment is always 1
+# fourth column is predictions for L_m when the treatment is always 0
+# fifth column is predictions for the propensity score p(A=1)
+# the bound01() function is defined in estimator_functions.R and clips the
+# predicted probabilities
+dlong <- mutate(dlong,
+                gR1 = bound01(predict(fitR, newdata = mutate(dlong, A = 1), type = 'response')),
+                gR0 = bound01(predict(fitR, newdata = mutate(dlong, A = 0), type = 'response')),
+                h1 = bound01(predict(fitL, newdata = mutate(dlong, A = 1), type = 'response')),
+                h0 = bound01(predict(fitL, newdata = mutate(dlong, A = 0), type = 'response')),
+                gA1 = bound01(predict(fitA, newdata = mutate(dlong, A = 1), type = 'response')))
+
+# set the restricted time
+tau <- max(dlong$m)
+
+print("RMST estimate for each treatment arm and standard error estimate for the difference")
+tmle(dlong, tau)
+# see if the difference covers zero by computing Wald-type confidence intervals
+# where the point estimate is the difference in theta and the variance is the
+# estimate given
