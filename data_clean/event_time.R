@@ -120,6 +120,9 @@ compute_event_time <- function(months, values, value_type="EDSS", imputation_met
 # read the data for EDSS
 edss_data <- data.frame(read_excel("../preliminary_longitudinal_data.xlsx", sheet="edss"))
 
+# keep a copy of all of the patients
+patients <- edss_data %>% select(PatientName) %>% distinct(PatientName)
+
 # compute the event time for EDSS data
 edss_event_time <- edss_data %>%
     # replace Month with empty string then cast the string as an integer
@@ -175,7 +178,8 @@ nhpt_non_dominant_event_time <- msfc_data %>%
 print(nhpt_non_dominant_event_time)
 
 # merge all of the event times together
-event_times <- full_join(edss_event_time, t25fw_event_time, by="PatientName")
+event_times <- full_join(patients, edss_event_time, by="PatientName")
+event_times <- full_join(event_times, t25fw_event_time, by="PatientName")
 event_times <- full_join(event_times, nhpt_dominant_event_time, by="PatientName")
 event_times <- full_join(event_times, nhpt_non_dominant_event_time, by="PatientName")
 
@@ -201,7 +205,7 @@ select_event_time <- function(edss, t25fw, nhpt_dom, nhpt_non_dom) {
 
 event_times <- event_times %>%
     group_by(PatientName) %>%
-    summarize(event_time = select_event_time(edss_event, t25fw_event, nhpt_dominant_event, nhpt_non_dominant_event))
+    mutate(event_time = select_event_time(edss_event, t25fw_event, nhpt_dominant_event, nhpt_non_dominant_event))
 
 print(event_times)
 

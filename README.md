@@ -41,10 +41,10 @@ The steps of the data cleaning are as follows:
 
     c. We need to be careful about how we handle missing values between the baseline observation and the censoring time. For instance, an individual's observed EDSS scores may be [0:3, 6:4, 12:NA, 18:NA, 24:3]. The values at month 12 and month 18 could have been any value, even 10. If at month 12, the missing value was 4, then they would have experienced sustained disability progression at month 6.
 
-        - If the last observed value at time $t$ was a significant increase compared to baseline, then just one missing value could potentially be sustained disability progression at time $t$.
-        - If the last observed value at time $t$ was not a significant increase, then one missing value after time $t$ is not enough for there to be sustained disability progression at time $t$.
-        - If at time $t$ there was a significant increase and there is a missing value at time $t-1$, then there could be sustained disability progression at time $t-1$.
-        - If there are two consecutive missing values, then there could have been sustained disability progression.
+    - If the last observed value at time $t$ was a significant increase compared to baseline, then just one missing value could potentially be sustained disability progression at time $t$.
+    - If the last observed value at time $t$ was not a significant increase, then one missing value after time $t$ is not enough for there to be sustained disability progression at time $t$.
+    - If at time $t$ there was a significant increase and there is a missing value at time $t-1$, then there could be sustained disability progression at time $t-1$.
+    - If there are two consecutive missing values, then there could have been sustained disability progression.
 
     d. To start, we will use linear interpolation where we use the two observed values at each end of the missingness span and draw a straight line between them to fill in the missing values. Then, we will repeat the analysis two times: once with a "best-case" imputation method where all missing values have the most favorable EDSS score possible then a "worst-case" imputation method where all missing values have the worst EDSS score possible.
 
