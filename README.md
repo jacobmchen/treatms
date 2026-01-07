@@ -35,7 +35,7 @@ The steps of the data cleaning are as follows:
 
 4. Compute the event time (disease progression) for each individual.
 
-    a. Sustained disability progression for EDSS is defined as an increase of $\geq 1$ if baseline EDSS is $\leq 5.5$ that is sustained 6 months later. If baseline EDSS is $\geq 6.0$, a sustained increase of $\geq 0.5$ qualifies as a significant change. For instance, an individual's observed EDSS scores could be [0:3, 6:4, 12:3.5, 18:4, 24:4] (the number to the left of the colon is the month, and the number to the right of the column is the observed EDSS score), and they would have experienced sustained disability progression at month 18.
+    a. Sustained disability progression for EDSS is defined as an increase of $\geq 1$ from baseline if baseline EDSS is $\leq 5.5$ that is sustained 6 months later. If baseline EDSS is $\geq 6.0$, a sustained increase of $\geq 0.5$ from baseline qualifies as a significant change. For instance, an individual's observed EDSS scores could be [0:3, 6:4, 12:3.5, 18:4, 24:4] (the number to the left of the colon is the month, and the number to the right of the column is the observed EDSS score), and they would have experienced sustained disability progression at month 18.
 
     b. Sustained disability progression for timed 25 foot walk (T25FW) and 9 hole peg test (9HPT) is defined as an increase of $\geq 20\%$ of the baseline value that is sustained 6 months later. 
 
