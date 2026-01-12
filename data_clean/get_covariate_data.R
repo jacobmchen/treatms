@@ -24,6 +24,15 @@ baseline_data <- baseline_data %>%
     mutate(risk_stratification = as.numeric(factor(risk_stratification)) - 1) %>%
     # convert the ethnicity data to 0 and 1 since it is binary
     mutate(ethnicity = as.numeric(factor(ethnicity)) - 1) %>%
+    # remove the spaces from the values of the race_calculated and SiteName
+    # columns
+    mutate(race_calculated = gsub(" ", "", race_calculated)) %>%
+    mutate(SiteName = gsub(" ", "", SiteName)) %>%
+    # change the - and / characters to an empty string to avoid string problems
+    # later on for the columns SiteName and gender
+    mutate(SiteName = gsub("-", "", SiteName)) %>%
+    mutate(SiteName = gsub("/", "", SiteName)) %>%
+    mutate(gender = gsub("-", "", gender)) %>%
     # one hot encode gender, race, and site name since these are unordered
     # categorical variables
     dummy_cols(select_columns=c("gender", "race_calculated", "SiteName")) %>%
