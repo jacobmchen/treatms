@@ -29,6 +29,10 @@ The steps of the data cleaning are as follows:
 
 1. One-hot encode all categorical variables.
 
+    - The baseline covariates are: randomization site, risk stratification, age at consent, sex at birth, race, ethnicity.
+    
+    - We remove patient 0225-016 since we don't have any data on them, but they show up in the baseline chars data.
+
 2. Use MICE to fill in missing data for all covariates.
 
 3. Compute the censoring time for each individual. The censoring time will be the last value at which every observation afterwards is a missing value. We need to compute the censoring time for four variables: EDSS, T25FW, 9HPT dominant hand, and 9HPT non-dominant hand. The individual's censoring time is the maximum of these values.
