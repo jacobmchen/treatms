@@ -1,6 +1,13 @@
 # TREAT-MS Analysis Code
 
-``data_exploration.R`` contains preliminary analysis code. At the moment, all the code is in a single file, so some refactoring needs to be done.
+The code for data pre-processing and implementation of the restricted mean survival time (RMST) analysis is contained in the folder ``data_clean``. The data itself is not contained in the repository due to data privacy. A short description of each file in the repository is as follows:
+- The file ``compute_censoring_time.R`` computes the censoring time for each individual.
+- The file ``event_time.R`` computes the event time (sustained disability progression) for each individual, if they experienced the event.
+- The file ``get_covariate_data.R`` retrieves and cleans the baseline covariate data.
+- The file ``combine_data.R`` combines the data computed in the above three files into one centralized dataset.
+- The file ``rmst_analysis.R`` executes the RMST analysis and outputs the RMST for each treatment group.
+
+Below are notes on codebase updates with dates.
 
 2025-12-19
 - Out of the patients who returned for at least 1 post-baseline follow-up visit, how many have at least 2 post-baseline EDSS+ measured?
@@ -34,6 +41,8 @@ The steps of the data cleaning are as follows:
     - We remove patient 0225-016 since we don't have any data on them, but they show up in the baseline chars data.
 
 2. Use MICE to fill in missing data for all covariates.
+
+    - The baseline covariates listed in the previous step end up being fully observed.
 
 3. Compute the censoring time for each individual. The censoring time will be the last value at which every observation afterwards is a missing value. We need to compute the censoring time for four variables: EDSS, T25FW, 9HPT dominant hand, and 9HPT non-dominant hand. The individual's censoring time is the maximum of these values.
 
