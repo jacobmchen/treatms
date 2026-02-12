@@ -7,6 +7,8 @@ The code for data pre-processing and implementation of the restricted mean survi
 - The file ``combine_data.R`` combines the data computed in the above three files into one centralized dataset.
 - The file ``rmst_analysis.R`` executes the RMST analysis and outputs the RMST for each treatment group.
 
+The folder ``pdds_explore`` contains some code plotting histograms for the PDDS score at various time intervals as well as the histograms themselves.
+
 Below are notes on codebase updates with dates.
 
 2025-12-19
@@ -68,3 +70,6 @@ The steps of the data cleaning are as follows:
 With the cleaned data, we will apply the code from Diaz et al. to estimate the RMST.
 
 In order to promote a more modular code design that is easier to understand, revisit, and update over time, each of the numbered points will be developed in separate modules and files.
+
+2026-02-11
+We seek to plot histograms for the PDDS score. We will plot histograms of the baseline PDDS score and even numbered visits. The code for plotting these histograms are contained in the folder ``pdds_explore``, in the file ``plot_histograms.R``.
