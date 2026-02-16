@@ -1,6 +1,6 @@
 # TREAT-MS Analysis Code
 
-The code for data pre-processing and implementation of the restricted mean survival time (RMST) analysis is contained in the folder ``data_clean``. The data itself is not contained in the repository due to data privacy. A short description of each file in the repository is as follows:
+The code for data pre-processing and implementation of the restricted mean survival time (RMST) analysis is contained in the folder ``primary_analysis``. The data itself is not contained in the repository due to data privacy. A short description of each file in the repository is as follows:
 - The file ``compute_censoring_time.R`` computes the censoring time for each individual.
 - The file ``event_time.R`` computes the event time (sustained disability progression) for each individual, if they experienced the event.
 - The file ``get_covariate_data.R`` retrieves and cleans the baseline covariate data.
@@ -77,4 +77,8 @@ We seek to plot histograms for the PDDS score. We will plot histograms of the ba
 
 2026-02-16
 
-Added a README in the simulations folder to describe the simulations.
+Rename the folder ``data_clean`` to ``primary_analysis`` to better align with what the files in the folder are actually doing.
+
+Need to add simulations in the ``primary_analysis`` folder where we simulate treatments randomly and run the RMST analysis with different restriction windows.
+
+We want to change the way we deal with missing data in the RMST analysis to be through MICE rather than through linear interpolation, which is what we have implemented now.

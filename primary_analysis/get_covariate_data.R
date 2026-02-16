@@ -44,5 +44,8 @@ baseline_data <- baseline_data %>%
     # remove columns we cleaned and no longer need
     select(-c(gender, race_calculated, SiteName, birth_date, consent_date))
 
+# we have verified that there are no missing values in the baseline data
+# print(anyNA(baseline_data))
+
 # save the baseline data as an RDS file
 saveRDS(baseline_data, file="baseline_data.RDS")
