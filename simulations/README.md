@@ -1,0 +1,22 @@
+In the folder ``simulations``, we will have some simulations that test the power and variance of the RMST analysis depending on the restriction time of the analysis. If we set a short time window, then we are not using all of the data that we have available since measurements after the cutoff point will not be used. On the other hand, if we set a long time window, then there will be more missing values as subjects will become censored as time goes on. There is some tradeoff between variance of the RMST estimate and how long we set the time window.
+
+The steps of the simulation are as follows:
+
+1. We will simulate the assignment of $n=5000$ (the sample size can be adjusted as needed) subjects into 5 clusters. $S$ represents an individual's cluster ($S$ stands for site). Assignment into clusters will be drawn from a categorical ("multinoulli") distribution where the probability of being assigned into each cluster will be the same (i.e. the probability of being assigned to each cluster will be $0.2$). $S$ is a categorical variable, and the values are not ordered.
+
+2. We will simulate a covariate $X$ for each subject. This covariate represents baseline risk, where $X=0$ means low risk and $X=1$ means high risk. $X$ will thus be a binary variable with a different probability of success depending on the cluster of each subject. This represents the fact that baseline characteristics can vary across clusters. The specific probability of being a high risk patient is $expit(0.1*S)$. This means that being assigned to a high-numbered cluster gives a higher probability of being high risk. However, remember that $S$ is not ordinal; setting up the simulation this way is just to make things convenient.
+
+3. We will simulate the treatment variable $A$ for each subject. To more closely align with the randomization scheme of the actual study, we will subset to each cluster and risk category (10 subsets of the data in total) and randomly select half of the subjects to be assigned treatment $A=0$ and let the other half of the subjects have treatment $A=1$. As the reader will see in step 4, we will generate data such that those in the treatment $A=1$ group have more favorable outcomes (longer average time to event).
+
+4. The outcome variable is a time to event variable. This variable is further complicated by the possibility of becoming censored at each time point. The time points (visit numbers) will be numbered from $1$ to $10$. At each time point, each subject will have a probability of experiencing the event and a probability for becoming censored. If a subject experiences the event, we no longer need to simulate future events. Similarly, if a subject becomes censored, we no longer need to simulate future events. It is also possible that a subject neither experiences the event nor gets censored at visits 1 through 10.
+
+Suppose we are at time $k$. The probability of the event occurring at time $k$ will be $expit(-3 + X - A + 0.2*k)$. This encodes the assumption that (i) patients with higher risk ($X=1$) are more likely to experience the event, (ii) patients assigned treatment ($A=1$) are less likely to experience the event, and (iii) patients are more likely to experience the event as time progresses.
+
+The probability of a subject being censored at time $k$ will be $expit(-4 + X - A + 0.3*k)$. This encodes the same assumptions as before for the probability of the event occurring. The only differences are that (i) the intercept term is different to make sure that the probability of censoring is lower at the beginning of the study and (ii) the coefficient for $k$ is larger so that the probability of censoring increases more quickly as time goes on.
+
+The specific data-generating processes are subject to change, but the general forms will remain the same.
+
+5. Steps 1-4 completely describe the data-generating process. The last step of the simulation is to estimate the difference in RMSTs between treatment and no-treatment groups at various restriction times. We will compute RMST estimates for restriction times from 3-10 and compare the empirical variances of the estimates.
+
+My guess is that the variance of the estimates will decrease as the restriction time increases because we will be using more of the data. However, there will be a point at which extending the restriction time will no longer decrease the variance and instead increase it because too many patients will become censored before reaching the restriction time.
+
