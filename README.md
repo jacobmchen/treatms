@@ -2,10 +2,11 @@
 
 The code for data pre-processing and implementation of the restricted mean survival time (RMST) analysis is contained in the folder ``primary_analysis``. The data itself is not contained in the repository due to data privacy. A short description of each file in the repository is as follows:
 - The file ``compute_censoring_time.R`` computes the censoring time for each individual.
-- The file ``event_time.R`` computes the event time (sustained disability progression) for each individual, if they experienced the event.
 - The file ``get_covariate_data.R`` retrieves and cleans the baseline covariate data.
+- The file ``event_time.R`` computes the event time (sustained disability progression) for each individual, if they experienced the event. Missing values are imputed using MICE under the MAR assumption. To run this file, it needs the outputs from the two previous files.
 - The file ``combine_data.R`` combines the data computed in the above three files into one centralized dataset.
-- The file ``rmst_analysis.R`` executes the RMST analysis and outputs the RMST for each treatment group.
+- The file ``rmst_analysis.R`` executes the RMST analysis and outputs the RMST for each treatment group as well as the square root of the variance for the difference in means estimate. This file also contains simulations where we try different time windows and evaluate the variance.
+- The file ``plot_simulation_results.R`` plots simulation results from the variance simulations in the ``rmst_analysis.R`` file.
 
 The folder ``pdds_explore`` contains some code plotting histograms for the PDDS score at various time intervals as well as the histograms themselves.
 
@@ -81,4 +82,8 @@ Rename the folder ``data_clean`` to ``primary_analysis`` to better align with wh
 
 Need to add simulations in the ``primary_analysis`` folder where we simulate treatments randomly and run the RMST analysis with different restriction windows.
 
-We want to change the way we deal with missing data in the RMST analysis to be through MICE rather than through linear interpolation, which is what we have implemented now.
+We want to change the way we deal with missing data in the RMST analysis to be through MICE rather than through linear interpolation, which is what we have implemented now. This was successfully implemented in the file ``rmst_analysis.R`` file.
+
+2026-02-17
+
+After implementing the simulation study successfully, we need to plot the results. This is done in the file ``plot_simulation_results.R``.

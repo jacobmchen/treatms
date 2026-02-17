@@ -81,10 +81,41 @@ dlong <- mutate(dlong,
                 gA1 = bound01(predict(fitA, newdata = mutate(dlong, A = 1), type = 'response')))
 
 # set the restricted time
-tau <- max(60)
-
-print("RMST estimate for each treatment arm and standard error estimate for the difference")
-tmle(dlong, tau)
+# tau <- 60
+#
+# print("RMST estimate for each treatment arm and standard error estimate for the difference")
+# tmle(dlong, tau)
 # see if the difference covers zero by computing Wald-type confidence intervals
-# where the point estimate is the difference in theta and the variance is the
-# estimate given
+# where the point estimate is the difference in theta and the standard error is the
+# estimate given, still need to multiply critical values from standard normal distribution
+
+# declare the restriction times we are interested in comparing variances for;
+# this will be month 12 to the max censoring time, month 84
+restriction_times <- seq(from=12, to=max(dlong$m), by=6)
+
+# declare a vector to store the estimated RMST
+estimate <- c()
+# declare a vector to store the estimated variances
+estimated_variance <- c()
+
+# iterate through the restriction times we want to compute estimates for
+for (t in restriction_times) {
+    print(paste("restriction window", t))
+    # compute estimates for the RMST at the current restriction time
+    tmle_est <- tmle(dlong, t)
+    print(tmle_est)
+
+    # save the estimate for the RMST for the treatment group (only save one
+    # because by simulation design treatment and non-treatment groups
+    # will have similar estimates)
+    estimate <- c(estimate, tmle_est$theta[1])
+    # save the estimated variance
+    estimated_variance <- c(estimated_variance, tmle_est$sdn)
+}
+
+# save the simulation results into a dataframe
+variance_data <- data.frame(restriction_time=restriction_times, estimate=estimate, variance=estimated_variance)
+print(variance_data)
+
+# save the simulation results into an RDS file
+saveRDS(variance_data, file="simulation_results.RDS")
