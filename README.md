@@ -86,4 +86,16 @@ We want to change the way we deal with missing data in the RMST analysis to be t
 
 2026-02-17
 
-After implementing the simulation study successfully, we need to plot the results. This is done in the file ``plot_simulation_results.R``.
+After implementing the simulation study successfully, we need to plot the results. This is done in the file ``plot_simulation_results.R``, at the end of the file.
+
+2026-02-20
+
+We now seek to evaluate the variance of the RMST estimator under the following scenarios:
+
+1. One-hot encode and adjust on all clusters.
+2. Combine some of the clusters.
+3. Leave all clusters out.
+
+The current implementation already adjusts on all clusters, so we simply need to modify ``get_covariate_data.R`` to process the covariate data differently and re-run the analysis using these different versions of the cleaned data.
+
+In my implementations, I endeded up doing two different versions of 2. One version combined all clusters with less than 10 patients as "Other", and one version converted the clusters to the states that they were in. To get the implementation to flow more smoothly I changed a lot of files to define a function for the task and re-run the respective tasks for the different versions of the dataset that handle the clusters differently.
