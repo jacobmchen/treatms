@@ -2,13 +2,16 @@
 # be the maximum of the censoring times for EDSS, T25FW, 9HPT
 # dominant hand, and 9HPT non-dominant hand.
 
+# read global variables
+source("global_variables.R")
+
 # package for real excel files
 library(readxl)
 # package for operations on manipulating data
 library(tidyverse)
 
 # read the data for EDSS
-edss_data <- data.frame(read_excel("../preliminary_longitudinal_data.xlsx", sheet="edss"))
+edss_data <- data.frame(read_excel(data_file_name, sheet="edss"))
 
 # keep a copy of all of the patients
 patients <- edss_data %>% select(PatientName) %>% distinct(PatientName)
@@ -29,8 +32,12 @@ edss_censoring_time <- edss_data %>%
     # rename the column
     rename(edss_censor=month)
 
+# TO-DO: create a global variable that computes the average and run
+# the msfc data through that function so that we don't have to
+# rewrite the code here
+
 # read the data for T25FW and 9HPT
-msfc_data <- data.frame(read_excel("../preliminary_longitudinal_data.xlsx", sheet="msfc"))
+msfc_data <- data.frame(read_excel(data_file_name, sheet="msfc"))
 
 # censoring time for t25fw
 t25fw_censoring_time <- msfc_data %>%

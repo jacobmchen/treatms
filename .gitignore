@@ -1,3 +1,4 @@
 *.xlsx
 *.RDS
 *.html
+*.DS_store

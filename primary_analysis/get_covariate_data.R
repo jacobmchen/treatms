@@ -6,6 +6,8 @@
 # all clusters. The second version includes no clusters, and
 # the third version groups some clusters together.
 
+source("global_variables.R")
+
 # package for real excel files
 library(readxl)
 # package for operations on manipulating data
@@ -47,7 +49,7 @@ process_data <- function(data) {
 }
 
 # read the data for baseline characteristics
-baseline_data <- data.frame(read_excel("../preliminary_longitudinal_data.xlsx", sheet="baseline chars"))
+baseline_data <- data.frame(read_excel(data_file_name, sheet="baseline chars"))
 
 # remove this patient since we have no data for them 
 baseline_data <- baseline_data %>%

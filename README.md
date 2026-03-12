@@ -1,6 +1,7 @@
 # TREAT-MS Analysis Code
 
 The code for data pre-processing and implementation of the restricted mean survival time (RMST) analysis is contained in the folder ``primary_analysis``. The data itself is not contained in the repository due to data privacy. A short description of each file in the repository is as follows:
+- The file ``global_variables.R`` contains declarations for global variables that are used throughout this analysis.
 - The file ``compute_censoring_time.R`` computes the censoring time for each individual.
 - The file ``get_covariate_data.R`` retrieves and cleans the baseline covariate data.
 - The file ``event_time.R`` computes the event time (sustained disability progression) for each individual, if they experienced the event. Missing values are imputed using MICE under the MAR assumption. To run this file, it needs the outputs from the two previous files.
@@ -99,3 +100,11 @@ We now seek to evaluate the variance of the RMST estimator under the following s
 The current implementation already adjusts on all clusters, so we simply need to modify ``get_covariate_data.R`` to process the covariate data differently and re-run the analysis using these different versions of the cleaned data.
 
 In my implementations, I endeded up doing two different versions of 2. One version combined all clusters with less than 10 patients as "Other", and one version converted the clusters to the states that they were in. To get the implementation to flow more smoothly I changed a lot of files to define a function for the task and re-run the respective tasks for the different versions of the dataset that handle the clusters differently.
+
+2026-03-11
+
+We received updated data with additional covariates and additional outcome data. The first order of business is to update the input file for all of the analysis files so that they read this new spreadsheet instead of the old one. To make changes like this more modular in the future, I'm going to create one file that defines the name of the string of the spreadsheet to read the data from, and all analysis files will use this string.
+
+This file is titled ``global_variables.R`` and will contain the filename as well as all of the global variables needed for this analysis in the future.
+
+One thing to watch out for is that sometimes NA values are populated with the string "not obtained".

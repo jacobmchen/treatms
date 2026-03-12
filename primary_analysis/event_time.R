@@ -8,6 +8,8 @@ library(tidyverse)
 # library for imputing missing values
 library(mice)
 
+source("global_variables.R")
+
 # define a function for computing the event time, if it happens
 #' Compute Event Time
 #' @param months A vector containing the months of the measurements
@@ -96,7 +98,7 @@ compute_event_time <- function(months, values, value_type="EDSS", imputation_met
 # compute_event_time(months, values)
 
 # read the data for EDSS
-edss_data <- data.frame(read_excel("../preliminary_longitudinal_data.xlsx", sheet="edss"))
+edss_data <- data.frame(read_excel(data_file_name, sheet="edss"))
 
 # read the data for censoring times, which was computed separately 
 censoring_times <- readRDS("censoring_times.RDS")
@@ -151,7 +153,7 @@ edss_event_time <- complete(imp, action=1) %>%
 
 print(edss_event_time)
 
-msfc_data <- data.frame(read_excel("../preliminary_longitudinal_data.xlsx", sheet="msfc"))
+msfc_data <- data.frame(read_excel(data_file_name, sheet="msfc"))
 
 # compute the event time for T25FW data
 t25fw_event_time <- msfc_data %>%
