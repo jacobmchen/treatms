@@ -108,3 +108,9 @@ We received updated data with additional covariates and additional outcome data.
 This file is titled ``global_variables.R`` and will contain the filename as well as all of the global variables needed for this analysis in the future.
 
 One thing to watch out for is that sometimes NA values are populated with the string "not obtained".
+
+2026-03-13
+
+Updated global variables to use the updated file and also added a new function that preprocesses MSFC data with mean values.
+
+Still left to do includes processing the baseline covariate variables that are predictive of outcome. We need to clean it up and see how much missingness there is in there. After that, we will impute the missing values with MICE as usual.

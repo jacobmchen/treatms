@@ -32,12 +32,10 @@ edss_censoring_time <- edss_data %>%
     # rename the column
     rename(edss_censor=month)
 
-# TO-DO: create a global variable that computes the average and run
-# the msfc data through that function so that we don't have to
-# rewrite the code here
-
 # read the data for T25FW and 9HPT
 msfc_data <- data.frame(read_excel(data_file_name, sheet="msfc"))
+# compute the averages for the three relevant metrics
+msfc_data <- compute_average_msfc(msfc_data)
 
 # censoring time for t25fw
 t25fw_censoring_time <- msfc_data %>%

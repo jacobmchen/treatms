@@ -141,6 +141,9 @@ edss_event_time <- edss_data %>%
     left_join(baseline_data, by="PatientName")
 
 # use MICE to impute missing values for EDSS in between visits
+# NOTE: the run time may take a while, but that is expected because we are
+# assuming MAR where all observed covariates are necessary to impute the 
+# missing data
 imp <- mice(edss_event_time, m=1, maxit=20, seed=0)
 
 # compute the event time after filling in missing values with MICE
@@ -154,6 +157,7 @@ edss_event_time <- complete(imp, action=1) %>%
 print(edss_event_time)
 
 msfc_data <- data.frame(read_excel(data_file_name, sheet="msfc"))
+msfc_data <- compute_average_msfc(msfc_data)
 
 # compute the event time for T25FW data
 t25fw_event_time <- msfc_data %>%

@@ -48,6 +48,10 @@ process_data <- function(data) {
     return(return_data)
 }
 
+# TO-DO: update code to also process the additional baseline covars in addition
+# to these baseline chars and evaluate how much missing data there is in the baseline
+# covars; also need to evaluate the collinearity of some of these variables
+
 # read the data for baseline characteristics
 baseline_data <- data.frame(read_excel(data_file_name, sheet="baseline chars"))
 
@@ -59,7 +63,7 @@ baseline_data <- baseline_data %>%
 baseline_data_all_clusters <- process_data(baseline_data)
 
 # we have verified that there are no missing values in the baseline data
-# print(anyNA(baseline_data))
+# print(anyNA(baseline_data_all_clusters))
 
 # save the baseline data as an RDS file
 saveRDS(baseline_data_all_clusters, file="baseline_data.RDS")
