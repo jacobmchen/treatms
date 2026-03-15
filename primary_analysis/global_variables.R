@@ -5,7 +5,11 @@
 library(tidyverse)
 
 # save file name for the longitudinal data
-data_file_name = "../longitudinal_data_set_10MAR2026.xlsx"
+data_file_name <- "../longitudinal_data_set_10MAR2026.xlsx"
+
+# save the string of the patient for whom we have no 
+# data for and will be removed
+no_data_patient <- "0225-016"
 
 # declare a function that reads the msfc data
 # and returns a version with the average for the t25fw and

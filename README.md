@@ -114,3 +114,19 @@ One thing to watch out for is that sometimes NA values are populated with the st
 Updated global variables to use the updated file and also added a new function that preprocesses MSFC data with mean values.
 
 Still left to do includes processing the baseline covariate variables that are predictive of outcome. We need to clean it up and see how much missingness there is in there. After that, we will impute the missing values with MICE as usual.
+
+2026-03-15
+
+Notes on updates for covariate data.
+
+- There are a couple of variables in the baseline covariates that overlap with the baseline characteristics that we already have. These variables are: male, older or very young, African American, Hispanic.
+- First thing, I will want to check that the four variables above actually match with the baseline characteristics variables.
+    - Patient ids 0400-011 and 0400-020 have missing values in baseline covariates since they are early withdrawal patients. However, their values are observed in baseline characteristics data.
+    - For the column gender, there are two patients with conflicting values. In baseline characteristics, patient ids 0402-002 and 0412-021 are female, but these patient ids are male in baseline covariates. Does it also make more sense to code non-binary the same as not male since there's only 3 patients that are non-binary?
+    - For the column race/african american, the baseline characteristics data is more fine since some patients are labelled as multiple races. I think it makes more sense to use the column race/african american since the label "MULTIPLE" could mean a lot of things, and it doesn't make sense to group patients labelled as "MULTIPLE" together.
+    - For the column ethnicity/hispanic, some patients are labelled as hispanic in baseline characteristics but not hispanic in baseline covariates, or vice versa.
+- Summary of discrepancies:
+    - Patients 0402-002 and 0412-021 are coded as female in baseline chars but male in baseline covars. 
+    - Patient 0101-010 is coded as American Indian or Alaska Native in baseline chars but African American in baseline covars.
+    - Patients 0241-006 and 0289-023 are coded as Other Race in baseline chars but African American in baseline covars. 
+    - Patients  "0104-098" "0104-128" "0238-014" "0241-022" "0241-025" "0267-004" "0267-006" "0405-014" "0420-005" "0420-007" have different values for Hispanic vs. Not Hispanic between baseline chars and baseline covars.
