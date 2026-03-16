@@ -137,5 +137,6 @@ Notes on data cleaning for the columns in the baseline covars data.
 
 - For now, use gender from baseline chars, AfrAmerican from baseline covars, and Hispanic from baseline chars.
 - For some early withdrawal patients, we have missing data on race in baseline covars whereas those values are observed in baseline chars.
-- Summary of missing values for baseline covars: "AfrAmerican": 6, "early second relapse missing": 81, "frequent relapses": 71, "incomplete recovery missing": 68, "high lesion burden missing": 33, "new T2 lesions missing": 484, "enchancing lesions missing": 55, "BS cerebellum SC missing": 18.
+- Summary of missing values for baseline covars: "AfrAmerican": 6, "early second relapse": 81, "frequent relapses": 71, "incomplete recovery": 68, "high lesion burden": 33, "new T2 lesions": 484, "enchancing lesions": 55, "BS cerebellum SC": 18.
 - Updated ``get_covariate_data.R`` to clean the baseline covars data and merge them with the baseline chars data. As before there are 4 versions of the baseline covar data based on how the clusters are handled: all clusters, no clusters, merge rare clusters, and merge clusters by state.
+- At the end of ``get_covariate_data.R``, added some short code that checks for collinearity of the covariate data by checking the condition number of the design matrix. Basically, merging clusters based on state gives the lowest condition number. Merging rare clusters is a bit better. Not having clusters at all is very collinear.
