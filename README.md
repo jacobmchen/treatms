@@ -130,3 +130,12 @@ Notes on updates for covariate data.
     - Patient 0101-010 is coded as American Indian or Alaska Native in baseline chars but African American in baseline covars.
     - Patients 0241-006 and 0289-023 are coded as Other Race in baseline chars but African American in baseline covars. 
     - Patients  "0104-098" "0104-128" "0238-014" "0241-022" "0241-025" "0267-004" "0267-006" "0405-014" "0420-005" "0420-007" have different values for Hispanic vs. Not Hispanic between baseline chars and baseline covars.
+
+2026-03-16
+
+Notes on data cleaning for the columns in the baseline covars data.
+
+- For now, use gender from baseline chars, AfrAmerican from baseline covars, and Hispanic from baseline chars.
+- For some early withdrawal patients, we have missing data on race in baseline covars whereas those values are observed in baseline chars.
+- Summary of missing values for baseline covars: "AfrAmerican": 6, "early second relapse missing": 81, "frequent relapses": 71, "incomplete recovery missing": 68, "high lesion burden missing": 33, "new T2 lesions missing": 484, "enchancing lesions missing": 55, "BS cerebellum SC missing": 18.
+- Updated ``get_covariate_data.R`` to clean the baseline covars data and merge them with the baseline chars data. As before there are 4 versions of the baseline covar data based on how the clusters are handled: all clusters, no clusters, merge rare clusters, and merge clusters by state.
