@@ -140,3 +140,13 @@ Notes on data cleaning for the columns in the baseline covars data.
 - Summary of missing values for baseline covars: "AfrAmerican": 6, "early second relapse": 81, "frequent relapses": 71, "incomplete recovery": 68, "high lesion burden": 33, "new T2 lesions": 484, "enchancing lesions": 55, "BS cerebellum SC": 18.
 - Updated ``get_covariate_data.R`` to clean the baseline covars data and merge them with the baseline chars data. As before there are 4 versions of the baseline covar data based on how the clusters are handled: all clusters, no clusters, merge rare clusters, and merge clusters by state.
 - At the end of ``get_covariate_data.R``, added some short code that checks for collinearity of the covariate data by checking the condition number of the design matrix. Basically, merging clusters based on state gives the lowest condition number. Merging rare clusters is a bit better. Not having clusters at all is very collinear.
+
+2026-03-20
+
+Notes on data cleaning for the column in the baseline covars data after today's meeting with collaboraters.
+
+- For relapse, we only need one symptom to recover in order for patient to be considered to have complete relapse recovery. We have a column for complete recovery and a column for incomplete recovery. It may be the case that a patient who has relapse has neither complete nor incomplete recovery. This may occur if for example the patient has sustained worsening of their symptoms or if their relapse symptoms worsen at month 6 but then improve to levels that are still above baseline.
+- For discrepancies between baseline char and covar data, we will defer to baseline char data as this is what the patient filled in. For age, we can just use the patient's actual age. We will also get additional sex at birth data to make sure that the data is just binary.
+- The variable "new T2 lesions" has a lot of Unknown values. We will get additional data that fills in these Unknown values based on what the clinicians actually inputted into the risk stratification forms.
+
+Updated ``get_covariate_data.R`` to use baseline chars for gender, ethnicity, and race. We still have a lot of missing data for other baseline covariate data, but we will receive that soon.

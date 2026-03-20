@@ -6,6 +6,7 @@
 # all clusters. The second version includes no clusters, and
 # the third version groups some clusters together.
 
+# read global variables
 source("global_variables.R")
 
 # package for real excel files
@@ -24,7 +25,7 @@ process_data <- function(data) {
         # convert the risk stratification data to 0 and 1 since it is binary
         mutate(risk_stratification = as.numeric(factor(risk_stratification)) - 1) %>%
         # convert the ethnicity data to 0 and 1 since it is binary
-        mutate(ethnicity = as.numeric(factor(ethnicity)) - 1) %>%
+        mutate(ethnicity = ifelse(ethnicity == "Hispanic or Latino", 1, 0)) %>%
         # remove the spaces from the values of the race_calculated and SiteName
         # columns
         mutate(race_calculated = gsub(" ", "", race_calculated)) %>%
@@ -34,9 +35,13 @@ process_data <- function(data) {
         mutate(SiteName = gsub("-", "", SiteName)) %>%
         mutate(SiteName = gsub("/", "", SiteName)) %>%
         mutate(gender = gsub("-", "", gender)) %>%
-        # one hot encode gender, race, and site name since these are unordered
-        # categorical variables; remove first dummy to prevent collinearity issues
-        dummy_cols(select_columns=c("gender", "race_calculated", "SiteName"), remove_first_dummy=TRUE) %>%
+        # binarize whether the patient is African American
+        mutate(race = ifelse(race_calculated == "BLACK OR AFRICAN AMERICAN", 1, 0)) %>%
+        # binarize whether the patient is male
+        mutate(gender = ifelse(gender == "Male", 1, 0)) %>%
+        # one hot encode site name since these are unordered categorical variables;
+        # remove first dummy to prevent collinearity issues
+        dummy_cols(select_columns=c("SiteName"), remove_first_dummy=TRUE) %>%
         # compute the age at consent as the difference between the consent
         # date and the birth date
         mutate(birth_date = as.Date(birth_date, format="%m/%d/%Y")) %>%
@@ -44,7 +49,7 @@ process_data <- function(data) {
         mutate(age = as.numeric(consent_date - birth_date) %/% 365) %>%
         # remove columns we cleaned and no longer need,
         # and remove the column gender non-binary
-        select(-c(gender, race_calculated, SiteName, birth_date, consent_date))
+        select(-c(race_calculated, SiteName, birth_date, consent_date))
 
     return(return_data)
 }
@@ -52,18 +57,25 @@ process_data <- function(data) {
 # create a function that takes all data processing steps from the
 # baseline covariates data
 process_data_covars <- function(data) {
+    # TO-DO: replace UNKNOWN values in the data with what clinicians
+    # inputted into the risk stratification data, which should have
+    # no missing values
+
     return_data <- data %>%
+        # deselect all of the variables that we are not using from the
+        # baseline covars data
         select(-c(site_full_name, patient_status, male, older.or.very.young,
-                  Hispanic)) %>%
+                  Hispanic, AfrAmerican)) %>%
         # across all of the columns indicated, convert to NA any
         # string that says Unknown, and then change it to a 
         # numeric value
-        mutate(across(c(AfrAmerican, early.second.relapse,
+        mutate(across(c(early.second.relapse,
                         frequent.relapses, incomplete.recovery,
                         high.lesion.burden, new.T2.lesions,
                         enhancing.lesions, BS_cerebellum_SC), ~ as.numeric(factor(na_if(.x, "Unknown"))) - 1)) %>%
         rename(PatientName = patient_id)
 
+    # code for evaluating missing data in the covariate data
     # print("AfrAmerican missing")
     # print(return_data$patient_id[which(is.na(return_data$AfrAmerican))])
     # print(sum(is.na(return_data$AfrAmerican)))
@@ -96,6 +108,10 @@ merge_char_covar_data <- function(char_data, covar_data) {
 
     return(return_data)
 }
+
+###
+# finished defining functions, actual code is below
+###
 
 # read the data for baseline characteristics
 baseline_data <- data.frame(read_excel(data_file_name, sheet="baseline chars"))
@@ -270,50 +286,53 @@ baseline_data_merge_states <- merge_char_covar_data(baseline_data_merge_states, 
 # save the baseline data as an RDS file
 saveRDS(baseline_data_merge_states, file="baseline_data_merge_states.RDS")
 
-# check for collinearity
-# remove the PatientName column so it doesn't get
-# one-hot encoded
-check_collinear <- baseline_data_merge_states %>%
-    select(-c(PatientName, new.T2.lesions))
-# note that the model.matrix function only keeps
-# rows that are completely observed
-X <- model.matrix(~ ., data=check_collinear)[, -1]
-print(nrow(X))
-sds <- apply(X, 2, sd, na.rm=TRUE)
-X2 <- X[, sds > 0 & !is.na(sds), drop = FALSE]
-print("merge states")
-print(kappa(scale(X2)))
-
-check_collinear <- baseline_data_merge_rare_clusters %>%
-    select(-c(PatientName, new.T2.lesions))
-# note that the model.matrix function only keeps
-# rows that are completely observed
-X <- model.matrix(~ ., data=check_collinear)[, -1]
-print(nrow(X))
-sds <- apply(X, 2, sd, na.rm=TRUE)
-X2 <- X[, sds > 0 & !is.na(sds), drop = FALSE]
-print("merge rare clusters")
-print(kappa(scale(X2)))
-
-check_collinear <- baseline_data_all_clusters %>%
-    select(-c(PatientName, new.T2.lesions))
-# note that the model.matrix function only keeps
-# rows that are completely observed
-X <- model.matrix(~ ., data=check_collinear)[, -1]
-print(nrow(X))
-sds <- apply(X, 2, sd, na.rm=TRUE)
-X2 <- X[, sds > 0 & !is.na(sds), drop = FALSE]
-print("all clusters")
-print(kappa(scale(X2)))
-
-check_collinear <- baseline_data_no_clusters %>%
-    select(-c(PatientName, new.T2.lesions))
-# note that the model.matrix function only keeps
-# rows that are completely observed
-X <- model.matrix(~ ., data=check_collinear)[, -1]
-print(nrow(X))
-sds <- apply(X, 2, sd, na.rm=TRUE)
-X2 <- X[, sds > 0 & !is.na(sds), drop = FALSE]
-print("no clusters")
-print(kappa(scale(X2)))
+###
+# rough draft of code that checks for collinearity
+###
+# # check for collinearity
+# # remove the PatientName column so it doesn't get
+# # one-hot encoded
+# check_collinear <- baseline_data_merge_states %>%
+#     select(-c(PatientName, new.T2.lesions))
+# # note that the model.matrix function only keeps
+# # rows that are completely observed
+# X <- model.matrix(~ ., data=check_collinear)[, -1]
+# print(nrow(X))
+# sds <- apply(X, 2, sd, na.rm=TRUE)
+# X2 <- X[, sds > 0 & !is.na(sds), drop = FALSE]
+# print("merge states")
+# print(kappa(scale(X2)))
+#
+# check_collinear <- baseline_data_merge_rare_clusters %>%
+#     select(-c(PatientName, new.T2.lesions))
+# # note that the model.matrix function only keeps
+# # rows that are completely observed
+# X <- model.matrix(~ ., data=check_collinear)[, -1]
+# print(nrow(X))
+# sds <- apply(X, 2, sd, na.rm=TRUE)
+# X2 <- X[, sds > 0 & !is.na(sds), drop = FALSE]
+# print("merge rare clusters")
+# print(kappa(scale(X2)))
+#
+# check_collinear <- baseline_data_all_clusters %>%
+#     select(-c(PatientName, new.T2.lesions))
+# # note that the model.matrix function only keeps
+# # rows that are completely observed
+# X <- model.matrix(~ ., data=check_collinear)[, -1]
+# print(nrow(X))
+# sds <- apply(X, 2, sd, na.rm=TRUE)
+# X2 <- X[, sds > 0 & !is.na(sds), drop = FALSE]
+# print("all clusters")
+# print(kappa(scale(X2)))
+#
+# check_collinear <- baseline_data_no_clusters %>%
+#     select(-c(PatientName, new.T2.lesions))
+# # note that the model.matrix function only keeps
+# # rows that are completely observed
+# X <- model.matrix(~ ., data=check_collinear)[, -1]
+# print(nrow(X))
+# sds <- apply(X, 2, sd, na.rm=TRUE)
+# X2 <- X[, sds > 0 & !is.na(sds), drop = FALSE]
+# print("no clusters")
+# print(kappa(scale(X2)))
 
