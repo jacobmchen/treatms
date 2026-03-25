@@ -3,7 +3,7 @@
 The code for data pre-processing and implementation of the restricted mean survival time (RMST) analysis is contained in the folder ``primary_analysis``. The data itself is not contained in the repository due to data privacy. A short description of each file in the repository is as follows:
 - The file ``global_variables.R`` contains declarations for global variables that are used throughout this analysis.
 - The file ``compute_censoring_time.R`` computes the censoring time for each individual.
-- The file ``get_covariate_data.R`` retrieves and cleans the baseline covariate data.
+- The file ``get_covariate_data.R`` retrieves and cleans the baseline covariate data. The end of the file also currently contains some code that attempts to check for collinearity of the covariates.
 - The file ``event_time.R`` computes the event time (sustained disability progression) for each individual, if they experienced the event. Missing values are imputed using MICE under the MAR assumption. To run this file, it needs the outputs from the two previous files.
 - The file ``combine_data.R`` combines the data computed in the above three files into one centralized dataset.
 - The file ``rmst_analysis.R`` executes the RMST analysis and outputs the RMST for each treatment group as well as the square root of the variance for the difference in means estimate. This file also contains simulations where we try different time windows and evaluate the variance.
@@ -150,3 +150,19 @@ Notes on data cleaning for the column in the baseline covars data after today's 
 - The variable "new T2 lesions" has a lot of Unknown values. We will get additional data that fills in these Unknown values based on what the clinicians actually inputted into the risk stratification forms.
 
 Updated ``get_covariate_data.R`` to use baseline chars for gender, ethnicity, and race. We still have a lot of missing data for other baseline covariate data, but we will receive that soon.
+
+2026-03-25
+
+Received some new data, and here are some notes on it.
+
+Sex at birth data cleaning.
+
+- The social status tab has a new column titled "sex_at_birth". It seems like it is haphazardly filled in, though, so will need to check it for missing data.
+- There are 243 patients for whom there is no value for "sex_at_birth".
+- Patient 0402-002 should be coded as female. Patient 0412-021 is transgender; their sex at birth should be male, and their gender should be female.
+
+Risk strat data cleaning.
+
+- The risk strat data contains one row per patient. Depending on when the patient enrolled, different questions are answered for them. If they enrolled within 6 months of their first attack, there are two questions answered. Otherwise, there are 4 questions answered. At first glance, there shouldn't be any missing values.
+- The difficulty with using risk strat data to fill in baseline covariates is that the risk strat questions use OR logic for a couple of the questions, so it's hard to tell which conditions are actually checked off. For instance, if I want to know whether certain patients had new T2 lesions and I see a "Yes" in the risk stratification data, 3 other variables could have been "Yes" instead of new T2 lesions.
+- Basically, the risk stratification data does not help us change "Unknown" to "Yes" or "No".
