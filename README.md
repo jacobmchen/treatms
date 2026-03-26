@@ -159,10 +159,17 @@ Sex at birth data cleaning.
 
 - The social status tab has a new column titled "sex_at_birth". It seems like it is haphazardly filled in, though, so will need to check it for missing data.
 - There are 243 patients for whom there is no value for "sex_at_birth".
-- Patient 0402-002 should be coded as female. Patient 0412-021 is transgender; their sex at birth should be male, and their gender should be female.
+- Patient 0402-002 should be coded as female (which they already are in baseline chars data). Patient 0412-021 is transgender; their sex at birth should be male, and their gender should be female.
 
 Risk strat data cleaning.
 
 - The risk strat data contains one row per patient. Depending on when the patient enrolled, different questions are answered for them. If they enrolled within 6 months of their first attack, there are two questions answered. Otherwise, there are 4 questions answered. At first glance, there shouldn't be any missing values.
 - The difficulty with using risk strat data to fill in baseline covariates is that the risk strat questions use OR logic for a couple of the questions, so it's hard to tell which conditions are actually checked off. For instance, if I want to know whether certain patients had new T2 lesions and I see a "Yes" in the risk stratification data, 3 other variables could have been "Yes" instead of new T2 lesions.
 - Basically, the risk stratification data does not help us change "Unknown" to "Yes" or "No".
+
+2026-03-26
+
+Sex at birth data cleaning continued.
+
+- Use the sex at birth variable where available, and use gender where it's missing. There is only one patient whose gender and sex at birth values do not match, patient 0270-012. Furthermore, there is one patient whose sex at birth is male since they are transgender, patient 0412-021. Since we are using sex at birth as the primary variable, we should change this patient's sex at birth to male.
+- Successfully updated the ``get_covariate_data.R`` code to use sex at birth data and fill in gender when needed.
