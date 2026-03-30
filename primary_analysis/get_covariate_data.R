@@ -6,6 +6,9 @@
 # all clusters. The second version includes no clusters, and
 # the third version groups some clusters together.
 
+# library for imputing missing values
+library(mice)
+
 # read global variables
 source("global_variables.R")
 
@@ -85,34 +88,15 @@ process_data_covars <- function(data) {
         # deselect all of the variables that we are not using from the
         # baseline covars data
         select(-c(site_full_name, patient_status, male, older.or.very.young,
-                  Hispanic, AfrAmerican)) %>%
+                  Hispanic, AfrAmerican, new.T2.lesions)) %>%
         # across all of the columns indicated, convert to NA any
         # string that says Unknown, and then change it to a 
         # numeric value
         mutate(across(c(early.second.relapse,
                         frequent.relapses, incomplete.recovery,
-                        high.lesion.burden, new.T2.lesions,
+                        high.lesion.burden,
                         enhancing.lesions, BS_cerebellum_SC), ~ as.numeric(factor(na_if(.x, "Unknown"))) - 1)) %>%
         rename(PatientName = patient_id)
-
-    # code for evaluating missing data in the covariate data
-    # print("AfrAmerican missing")
-    # print(return_data$patient_id[which(is.na(return_data$AfrAmerican))])
-    # print(sum(is.na(return_data$AfrAmerican)))
-    # print("early second relapse missing")
-    # print(sum(is.na(return_data$early.second.relapse)))
-    # print("frequent relapses")
-    # print(sum(is.na(return_data$frequent.relapses)))
-    # print("incomplete recovery missing")
-    # print(sum(is.na(return_data$incomplete.recovery)))
-    # print("high lesion burden missing")
-    # print(sum(is.na(return_data$high.lesion.burden)))
-    # print("new T2 lesions missing")
-    # print(sum(is.na(return_data$new.T2.lesions)))
-    # print("enchancing lesions missing")
-    # print(sum(is.na(return_data$enhancing.lesions)))
-    # print("BS cerebellum SC missing")
-    # print(sum(is.na(return_data$BS_cerebellum_SC)))
 
     return(return_data)
 }
@@ -158,37 +142,19 @@ baseline_covars <- process_data_covars(baseline_covars)
 # covariate data
 baseline_data_all_clusters <- merge_char_covar_data(baseline_data_all_clusters, baseline_covars)
 
-# start of code block
-###
-# below is code used to identify discrepancies between baseline covars and
-# baseline char data
-#
-# baseline_covars <- baseline_covars %>%
-#     select(c(patient_id, male, AfrAmerican, Hispanic)) %>%
-#     rename(PatientName = patient_id) %>%
-#     mutate(male = as.numeric(factor(male)) - 1) %>%
-#     mutate(AfrAmerican = ifelse(AfrAmerican == "Unknown", NA, AfrAmerican)) %>%
-#     mutate(AfrAmerican = as.numeric(factor(AfrAmerican)) - 1) %>%
-#     mutate(Hispanic = ifelse(Hispanic == "Unknown", NA, Hispanic)) %>%
-#     mutate(Hispanic = as.numeric(factor(Hispanic)) - 1)
-#
-# merged_baseline <- merge(baseline_data_all_clusters, baseline_covars, by="PatientName") %>%
-#     select(c(PatientName, male, gender_Male, AfrAmerican, race_calculated_BLACKORAFRICANAMERICAN,
-#              Hispanic, ethnicity))
-#
-# print(head(merged_baseline))
-# print("gender")
-# print(which(merged_baseline$male != merged_baseline$gender_Male))
-# print(merged_baseline[which(merged_baseline$male != merged_baseline$gender_Male), ])
-# print("african american")
-# print(which(merged_baseline$AfrAmerican != merged_baseline$race_calculated_BLACKORAFRICANAMERICAN))
-# print(merged_baseline[which(merged_baseline$AfrAmerican != merged_baseline$race_calculated_BLACKORAFRICANAMERICAN), ])
-# print("hispanic")
-# print(which(merged_baseline$Hispanic == merged_baseline$ethnicity))
-# print(merged_baseline[which(merged_baseline$Hispanic == merged_baseline$ethnicity), ])
-# print(merged_baseline$PatientName[which(merged_baseline$Hispanic == merged_baseline$ethnicity)])
-###
-# end of code block
+# use MICE to impute missing values of baseline covars
+imp <- mice(baseline_data_all_clusters, m=1, maxit=20, seed=0)
+imputed_data <- complete(imp, action=1)
+
+# save the imputed dataset
+baseline_data_all_clusters <- imputed_data
+
+# update the baseline covars data with the imputed values; all future uses of
+# baseline covars will be with this imputed version
+baseline_covars <- imputed_data %>%
+    select(c(PatientName, early.second.relapse, frequent.relapses,
+             incomplete.recovery, high.lesion.burden, enhancing.lesions,
+             BS_cerebellum_SC))
 
 # save the baseline data as an RDS file
 saveRDS(baseline_data_all_clusters, file="baseline_data.RDS")

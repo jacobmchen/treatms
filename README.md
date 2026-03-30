@@ -173,3 +173,11 @@ Sex at birth data cleaning continued.
 
 - Use the sex at birth variable where available, and use gender where it's missing. There is only one patient whose gender and sex at birth values do not match, patient 0270-012. Furthermore, there is one patient whose sex at birth is male since they are transgender, patient 0412-021. Since we are using sex at birth as the primary variable, we should change this patient's sex at birth to male.
 - Successfully updated the ``get_covariate_data.R`` code to use sex at birth data and fill in gender when needed.
+
+2026-03-30
+
+- New T2 lesions variable: we decided that there is probably not enough information in this baseline covariate due to the high amount of missingness for it to be helpful. Therefore, I am just going to drop this column in ``get_covariate_data.R``.
+- By the way, quick sanity check on the baseline covariate data: aside from new T2 lesions, each baseline covar has at least around 25% patients with a value of 1. This gives some confidence that these variables have some information on the outcome.
+- Need to impute missing values for the other baseline covars when they have an unknown value. This is now taken care of in the ``get_covariate_data.R`` file.
+
+- Create a new folder ``secondary_analyses`` to store code for all of the secondary analyses. We wish to start coding the secondary analysis for relapse recovery, both patient-reported and exam-based.
