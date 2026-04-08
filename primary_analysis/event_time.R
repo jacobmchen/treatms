@@ -104,7 +104,7 @@ edss_data <- data.frame(read_excel(data_file_name, sheet="edss"))
 censoring_times <- readRDS("censoring_times.RDS")
 
 # read the data for baseline characteristics, which was computed separately
-baseline_data <- readRDS("baseline_data.RDS")
+baseline_data <- readRDS("baseline_data_merge_states.RDS")
 
 # keep a copy of all of the patients
 patients <- edss_data %>% select(PatientName) %>% distinct(PatientName)
@@ -119,8 +119,18 @@ hpt_non_dominant_censoring_time <- censoring_times %>% select(PatientName, hpt_n
 edss_event_time <- edss_data %>%
     # replace Month with empty string then cast the string as an integer
     mutate(month = as.integer(gsub("Month ", "", FormGroup))) %>%
-    # keep only patient name, month, and edss score columns
-    select(PatientName, month, total_edss_score) %>%
+    # keep only patient name, month, and edss score columns (including
+    # sub-functional system scores)
+    select(PatientName, month, total_edss_score,
+           fs_cfss_total, fsvs_on_total, fs_bfss_total, total_pyramidal_score,
+           sensory_system_score_total, cerebellar_system_score_total, bowel_bladder_sys_score_total) %>%
+    # this column is being read as a string for some reason, so cast it
+    # as a numeric
+    mutate(fsvs_on_total = as.numeric(fsvs_on_total)) %>%
+    # remove problematic patient for whom we have no data
+    filter(PatientName != "0256-013") %>%
+    # change every instance of Not Obtained to a missing value in the data
+    mutate(across(where(is.character), ~ na_if(.x, "Not Obtained"))) %>%
     # group the data by the patient name
     group_by(PatientName) %>%
     # some patients may not have an entry for every 6-month interval;
@@ -146,6 +156,10 @@ edss_event_time <- edss_data %>%
 # missing data
 imp <- mice(edss_event_time, m=1, maxit=20, seed=0)
 
+# save the imputed data into a separate file
+imputed_data <- complete(imp, action=1)
+saveRDS(imputed_data, file="imputed_edss_data.RDS")
+
 # compute the event time after filling in missing values with MICE
 edss_event_time <- complete(imp, action=1) %>%
     select(PatientName, month, total_edss_score) %>%
@@ -165,6 +179,8 @@ t25fw_event_time <- msfc_data %>%
     mutate(month = as.integer(gsub("Month ", "", FormGroup))) %>%
     # keep only patient name, month, and t25fw score columns
     select(PatientName, month, trial_average_seconds) %>%
+    # remove problematic patient for whom we have no data
+    filter(PatientName != "0256-013") %>%
     # group the data by the patient name
     group_by(PatientName) %>%
     # some patients may not have an entry for every 6-month interval;
@@ -184,7 +200,7 @@ t25fw_event_time <- msfc_data %>%
     # missing data imputation
     left_join(baseline_data, by="PatientName")
 
-# use MICE to impute missing values for EDSS in between visits
+# use MICE to impute missing values for msfc data in between visits
 imp <- mice(t25fw_event_time, m=1, maxit=20, seed=0)
 
 # compute the event time after filling in missing values with MICE
@@ -203,6 +219,8 @@ nhpt_dominant_event_time <- msfc_data %>%
     mutate(month = as.integer(gsub("Month ", "", FormGroup))) %>%
     # keep only patient name, month, and edss score columns
     select(PatientName, month, dominant_hand_average_seconds) %>%
+    # remove problematic patient for whom we have no data
+    filter(PatientName != "0256-013") %>%
     # group the data by the patient name
     group_by(PatientName) %>%
     # some patients may not have an entry for every 6-month interval;
@@ -222,7 +240,7 @@ nhpt_dominant_event_time <- msfc_data %>%
     # missing data imputation
     left_join(baseline_data, by="PatientName")
 
-# use MICE to impute missing values for EDSS in between visits
+# use MICE to impute missing values for msfc data in between visits
 imp <- mice(nhpt_dominant_event_time, m=1, maxit=20, seed=0)
 
 # compute the event time after filling in missing values with MICE
@@ -241,6 +259,8 @@ nhpt_non_dominant_event_time <- msfc_data %>%
     mutate(month = as.integer(gsub("Month ", "", FormGroup))) %>%
     # keep only patient name, month, and edss score columns
     select(PatientName, month, non_dominant_hand_average_seconds) %>%
+    # remove problematic patient for whom we have no data
+    filter(PatientName != "0256-013") %>%
     # group the data by the patient name
     group_by(PatientName) %>%
     # some patients may not have an entry for every 6-month interval;
@@ -260,7 +280,7 @@ nhpt_non_dominant_event_time <- msfc_data %>%
     # missing data imputation
     left_join(baseline_data, by="PatientName")
 
-# use MICE to impute missing values for EDSS in between visits
+# use MICE to impute missing values for msfc data in between visits
 imp <- mice(nhpt_non_dominant_event_time, m=1, maxit=20, seed=0)
 
 # compute the event time after filling in missing values with MICE

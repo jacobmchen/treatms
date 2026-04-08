@@ -4,10 +4,13 @@ The code for data pre-processing and implementation of the restricted mean survi
 - The file ``global_variables.R`` contains declarations for global variables that are used throughout this analysis.
 - The file ``compute_censoring_time.R`` computes the censoring time for each individual.
 - The file ``get_covariate_data.R`` retrieves and cleans the baseline covariate data. The end of the file also currently contains some code that attempts to check for collinearity of the covariates.
-- The file ``event_time.R`` computes the event time (sustained disability progression) for each individual, if they experienced the event. Missing values are imputed using MICE under the MAR assumption. To run this file, it needs the outputs from the two previous files.
+- The file ``event_time.R`` computes the event time (sustained disability progression) for each individual, if they experienced the event. Missing values are imputed using MICE under the MAR assumption. To run this file, it needs the outputs from the two previous files (``compute_censoring_time.R`` and ``get_covariate_data.R``).
 - The file ``combine_data.R`` combines the data computed in the above three files into one centralized dataset.
 - The file ``rmst_analysis.R`` executes the RMST analysis and outputs the RMST for each treatment group as well as the square root of the variance for the difference in means estimate. This file also contains simulations where we try different time windows and evaluate the variance.
 - The file ``plot_simulation_results.R`` plots simulation results from the variance simulations in the ``rmst_analysis.R`` file.
+
+In the folder ``secondary_analyses``,
+- The file ``exam_based_relapse_recovery.R`` contains code for computing the secondary outcome exam based relapse recovery.
 
 The folder ``pdds_explore`` contains some code plotting histograms for the PDDS score at various time intervals as well as the histograms themselves.
 
@@ -191,3 +194,9 @@ Sex at birth data cleaning continued.
 2026-04-08
 
 - EDSS data for certain subscores sometimes just says "Not Obtained". I suppose we can consider this as missing data?
+- For patient 0100-007, their date of relapse is Month 12 and their relevant symptom was Sensory, but their FSS score at Month 12 for Sensory is 0. Furthermore, their EDSS data at Month 24 is not recorded. Is it possible to calculate relapse recovery in this case?
+- At the moment, there are 75 patients that experience only one relapse and have at least one recorded symptom. However, 33 of these patients have at least one missing value for their relevant functional system scores. How can we compute relapse recovery for these patients? Do we just try to impute their functional system scores like we did with total EDSS scores?
+- The easiest way to deal with the above problem is probably to impute all of the functional system scores using MICE assuming MAR, just like we did when computing time to sustained disability progression. We can do this by just reusing the code we wrote in ``event_time.R``, except we ask it to impute missing values for all of the functional system scores as a function of all of the covariates. Then, we use the resulting dataframe to compute relapse recovery.
+- The imputed data is stored in ``imputed_edss_data.RDS`` in the ``primary_analysis`` folder.
+- When processing EDSS data, we have to ignore patient 0256-013 because we have no data for them.
+- Fixed bug in ``event_time.R`` where MICE was imputting data for a patient for whom we don't have covariate data for, 0256-013. This patient is early withdrawal anyways, so we don't need to worry about them. This should also make the run time for the imputation faster.

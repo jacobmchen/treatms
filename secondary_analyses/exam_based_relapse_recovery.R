@@ -106,17 +106,64 @@ relapse_data <- relapse_data_orig %>%
 # window corresponding to when they had their relapse
 relapse_data <- fill_in_formgroup(relapse_data)
 
-# read the EDSS data
-edss_data <- data.frame(read_excel(data_file_name, sheet="edss"))
+# read the imputed EDSS data
+# edss_data <- data.frame(read_excel(data_file_name, sheet="edss"))
+edss_data <- readRDS("../primary_analysis/imputed_edss_data.RDS")
 
 # filter the EDSS data to only patients that experience relapse only once
 # and have at least one symptom recorded
 edss_data <- edss_data %>%
     filter(PatientName %in% relapse_data$PatientName) %>%
-    # select for now only the data for the visit date
-    select(c(PatientName, FormGroup, visit_date))
+    # rename columns so that symptoms match the name of the functional
+    # system scores
+    rename(Mental = fs_cfss_total,
+           Visual = fsvs_on_total,
+           Brainstem = fs_bfss_total,
+           Pyramidal = total_pyramidal_score,
+           Sensory = sensory_system_score_total,
+           Cerebellar = cerebellar_system_score_total,
+           Bowel_or_bladder = bowel_bladder_sys_score_total,
+           FormGroup = month)
 
 print(head(relapse_data))
-# print(length(unique(relapse_data$PatientName)))
 
-print(head(relapse_data))
+# define a function that takes as input a PatientName, a FormGroup month
+# representing when the relapse occurred, and a list of relevant symptoms
+# and returns whether the patient experienced full recovery, partial recovery,
+# incomplete recovery, or other
+determine_relapse_recovery <- function(patient, month, symptoms) {
+    # filter edss data so that it only has the relevant patient
+    # and remove columns that won't help us determine relapse recovery
+    patient_edss <- edss_data %>%
+        filter(PatientName == patient) 
+
+    # replace all spaces with underscores in the symptom names
+    # to match with column names in the edss data
+    symptoms <- gsub(" ", "_", symptoms[[1]])
+
+    # change the string of the month of relapse to a numeric number
+    month <- as.numeric(gsub("\\D", "", month))
+    print(month)
+
+    # keep only the columns that are relevant to the symptoms that
+    # worsened during relapse
+    patient_edss <- patient_edss %>%
+        select(c(PatientName, FormGroup), all_of(symptoms)) %>%
+        # keep only rows where the recorded data is between 6 months before relapse
+        # and one year after relapse
+        filter(FormGroup >= month-6) %>%
+        filter(FormGroup <= month+12)
+    
+    print(patient_edss)
+
+    return(0)
+}
+
+# print(determine_relapse_recovery(relapse_data$PatientName[1], relapse_data$FormGroup[1], relapse_data$symptoms[1]))
+
+relapse_data <- relapse_data %>%
+    rowwise() %>%
+    mutate(recovery = determine_relapse_recovery(PatientName, FormGroup, symptoms))
+
+print(nrow(relapse_data))
+print(sum(relapse_data$recovery))
