@@ -14,8 +14,6 @@ source("global_variables.R")
 
 # package for real excel files
 library(readxl)
-# package for operations on manipulating data
-library(tidyverse)
 # package for one-hot encoding variables
 library(fastDummies)
 

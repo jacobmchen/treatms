@@ -174,10 +174,20 @@ Sex at birth data cleaning continued.
 - Use the sex at birth variable where available, and use gender where it's missing. There is only one patient whose gender and sex at birth values do not match, patient 0270-012. Furthermore, there is one patient whose sex at birth is male since they are transgender, patient 0412-021. Since we are using sex at birth as the primary variable, we should change this patient's sex at birth to male.
 - Successfully updated the ``get_covariate_data.R`` code to use sex at birth data and fill in gender when needed.
 
-2026-03-30
+2026-03-30 to 2026-04-01
 
 - New T2 lesions variable: we decided that there is probably not enough information in this baseline covariate due to the high amount of missingness for it to be helpful. Therefore, I am just going to drop this column in ``get_covariate_data.R``.
 - By the way, quick sanity check on the baseline covariate data: aside from new T2 lesions, each baseline covar has at least around 25% patients with a value of 1. This gives some confidence that these variables have some information on the outcome.
 - Need to impute missing values for the other baseline covars when they have an unknown value. This is now taken care of in the ``get_covariate_data.R`` file.
 
 - Create a new folder ``secondary_analyses`` to store code for all of the secondary analyses. We wish to start coding the secondary analysis for relapse recovery, both patient-reported and exam-based.
+- A total of 97 patients have exam-confirmed relapse at least once. 15 patients experience relapse more than once. These patients are "0100-123" "0173-071" "0216-040" "0231-002" "0262-002" "0267-001" "0267-086" "0267-091" "0289-004" "0289-011" "0300-028" "0401-002" "0403-013" "0410-016" "0425-011".
+- One patient has 3 relapses, each about a year apart. This patient is "0289-011".
+- For the patients that have multiple relapses, their second relapse can happen within months, or it can be about a year later. What to do about patients with multiple relapses? Ignore them for now, but can change how we deal with them later.
+
+- As collaborators mentioned, there are 7 patients for whom they had an exam-confirmed, yet they do not have any recorded symptoms. For now, we will ignore these patients until we receive data regarding which symptoms are associated with their relapse. For now, though, these patients are "0106-012" "0173-053" "0231-035" "0256-029" "0265-034" "0301-035" "0427-013".
+- Some patients have only an "Interim Information" for their form group data, which makes it hard to match over to the EDSS data since the EDSS data is recorded in terms of which 6 month interval the visit is. To account for this, the 9 patients with "Interim Information" will use their visit dates to match with the closest 6 month interval visit in the relapse data.
+
+2026-04-08
+
+- EDSS data for certain subscores sometimes just says "Not Obtained". I suppose we can consider this as missing data?
