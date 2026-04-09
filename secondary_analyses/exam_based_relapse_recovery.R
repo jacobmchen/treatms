@@ -139,24 +139,80 @@ determine_relapse_recovery <- function(patient, month, symptoms) {
 
     # replace all spaces with underscores in the symptom names
     # to match with column names in the edss data
-    symptoms <- gsub(" ", "_", symptoms[[1]])
+    symptoms <- gsub(" ", "_", symptoms)
 
     # change the string of the month of relapse to a numeric number
     month <- as.numeric(gsub("\\D", "", month))
-    print(month)
 
     # keep only the columns that are relevant to the symptoms that
     # worsened during relapse
     patient_edss <- patient_edss %>%
         select(c(PatientName, FormGroup), all_of(symptoms)) %>%
-        # keep only rows where the recorded data is between 6 months before relapse
-        # and one year after relapse
+        # keep only rows that are at least one month before the relapse
         filter(FormGroup >= month-6) %>%
+        # keep only rows that are less than a year after relapse
         filter(FormGroup <= month+12)
     
     print(patient_edss)
 
-    return(0)
+    # if there are less than 4 observed values of EDSS, then it
+    # is not possible to compute relapse recovery
+    if (nrow(patient_edss) < 4) {
+        print("Other")
+        return("Other")
+    }
+
+    # keep a count of how many FSS scores return to baseline,
+    # which is indicative of recovery
+    complete_recovery <- 0
+    incomplete_recovery <- 0
+    increasing_symptom <- FALSE
+
+    for (symptom in symptoms) {
+        pre_relapse_val <- patient_edss[[symptom]][1]
+        relapse_val <- patient_edss[[symptom]][2] 
+        post_6_relapse_val <- patient_edss[[symptom]][3]
+        post_12_relapse_val <- patient_edss[[symptom]][4]
+
+        if (post_6_relapse_val > relapse_val |
+                   post_12_relapse_val > relapse_val) {
+            # this symptom fulfills the criterion for neither complete recovery
+            # nor incomplete recovery, so turn on the flag for "other"
+            increasing_symptom <- TRUE
+        } else if (post_6_relapse_val <= pre_relapse_val & 
+            post_12_relapse_val <= pre_relapse_val) {
+            # this symptom fulfills the criterion for complete recovery
+            complete_recovery <- complete_recovery + 1
+        } else if (post_6_relapse_val <= relapse_val &
+                    post_6_relapse_val >= pre_relapse_val &
+                    post_12_relapse_val <= relapse_val &
+                    post_12_relapse_val >= pre_relapse_val) {
+            # this symptom fulfills the criterion for incomplete recovery
+            incomplete_recovery <- incomplete_recovery + 1
+        } else if (post_6_relapse_val <= pre_relapse_val &
+                   post_12_relapse_val <= relapse_val) {
+            # this symptom fulfills the criterion for incomplete recovery
+            incomplete_recovery <- incomplete_recovery + 1
+        } else {
+            # if none of the criteria above are fulfilled, then turn on the flag 
+            # for "other"
+            increasing_symptom <- TRUE
+        }
+    }
+
+    if (increasing_symptom) {
+        print("Other")
+        return("Other")
+    } else if (complete_recovery == length(symptoms)) {
+        print("Complete")
+        return("Complete")
+    } else if (incomplete_recovery == length(symptoms)) {
+        print("Incomplete")
+        return("Incomplete")
+    } else {
+        print("Partial")
+        return("Partial")
+    }
 }
 
 # print(determine_relapse_recovery(relapse_data$PatientName[1], relapse_data$FormGroup[1], relapse_data$symptoms[1]))
@@ -165,5 +221,5 @@ relapse_data <- relapse_data %>%
     rowwise() %>%
     mutate(recovery = determine_relapse_recovery(PatientName, FormGroup, symptoms))
 
-print(nrow(relapse_data))
-print(sum(relapse_data$recovery))
+print(head(relapse_data))
+
