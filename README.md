@@ -208,4 +208,4 @@ Sex at birth data cleaning continued.
 2026-04-14
 
 - Collaborators state that we can make the definition of relapse recovery simpler, just record whether patients had complete recovery, or not. To this end, we will define the outcome as "exam-based __complete__ relapse recovery" rather than "exam-based __incomplete__ relapse recovery". The working definition of complete relapse recovery is: A patient is said to have complete relapse recovery if ALL increased functional system scores (FSS) associated with symptoms of relapse return to pre-relapse values or lower 6 months after the exam-confirmed relapse. Pre-relapse values are defined as the value(s) of the relevant FSS 6 months before the exam-confirmed relapse.
-- 
+- This is now implemented in ``exam_based_relapse_recovery.R`` in the folder ``secondary_analyses``.
