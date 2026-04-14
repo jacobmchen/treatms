@@ -200,3 +200,12 @@ Sex at birth data cleaning continued.
 - The imputed data is stored in ``imputed_edss_data.RDS`` in the ``primary_analysis`` folder.
 - When processing EDSS data, we have to ignore patient 0256-013 because we have no data for them.
 - Fixed bug in ``event_time.R`` where MICE was imputting data for a patient for whom we don't have covariate data for, 0256-013. This patient is early withdrawal anyways, so we don't need to worry about them. This should also make the run time for the imputation faster.
+
+2026-04-10
+
+- Collaborators asked for the list of patients that experience multiple relapses. The function find_multiple_relapse_patients in the file ``exam_based_relapse_recovery.R`` outputs a csv file of patients that experience multiple relapses.
+
+2026-04-14
+
+- Collaborators state that we can make the definition of relapse recovery simpler, just record whether patients had complete recovery, or not. To this end, we will define the outcome as "exam-based __complete__ relapse recovery" rather than "exam-based __incomplete__ relapse recovery". The working definition of complete relapse recovery is: A patient is said to have complete relapse recovery if ALL increased functional system scores (FSS) associated with symptoms of relapse return to pre-relapse values or lower 6 months after the exam-confirmed relapse. Pre-relapse values are defined as the value(s) of the relevant FSS 6 months before the exam-confirmed relapse.
+- 

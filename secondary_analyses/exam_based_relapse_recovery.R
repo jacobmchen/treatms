@@ -76,6 +76,23 @@ fill_in_formgroup <- function(relapse_data) {
     return(relapse_data)
 }
 
+# define a function that finds the patients with multiple relapses
+# and saves them into a csv file
+find_multiple_relapse_patients <- function() {
+    # get patients that experience multiple relapses
+    relapse_data <- relapse_data_orig %>%
+        # only consider patients with exam-confirmed relapse recovery
+        filter(ra_est_event == "Exam-confirmed exacerbation") %>%
+        group_by(PatientName) %>%
+        # for now, only use patients that have one relapse to evaluate
+        # relapse recovery
+        filter(n() > 1)
+
+    print("multiple relapses")
+    print(head(relapse_data))
+    write.csv(relapse_data, "multiple_relapse_patients.csv", row.names=FALSE)
+}
+
 # read the relapse data
 relapse_data_orig <- data.frame(read_excel(data_file_name, sheet="relapse"))
 
@@ -223,3 +240,7 @@ relapse_data <- relapse_data %>%
 
 print(head(relapse_data))
 
+print(nrow(relapse_data %>% filter(recovery == "Complete")))
+print(nrow(relapse_data %>% filter(recovery == "Incomplete")))
+print(nrow(relapse_data %>% filter(recovery == "Partial")))
+print(nrow(relapse_data %>% filter(recovery == "Other")))
