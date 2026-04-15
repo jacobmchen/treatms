@@ -4,7 +4,7 @@ The code for data pre-processing and implementation of the restricted mean survi
 - The file ``global_variables.R`` contains declarations for global variables that are used throughout this analysis.
 - The file ``compute_censoring_time.R`` computes the censoring time for each individual.
 - The file ``get_covariate_data.R`` retrieves and cleans the baseline covariate data. The end of the file also currently contains some code that attempts to check for collinearity of the covariates.
-- The file ``event_time.R`` computes the event time (sustained disability progression) for each individual, if they experienced the event. Missing values are imputed using MICE under the MAR assumption. To run this file, it needs the outputs from the two previous files (``compute_censoring_time.R`` and ``get_covariate_data.R``).
+- The file ``event_time.R`` computes the event time (sustained disability progression) for each individual, if they experienced the event. Missing values are imputed using MICE under the MAR assumption. To run this file, it needs the outputs from the two previous files (``compute_censoring_time.R`` and ``get_covariate_data.R``). We can also run this file to impute data for EDSS and PDDS for use in other files.
 - The file ``combine_data.R`` combines the data computed in the above three files into one centralized dataset.
 - The file ``rmst_analysis.R`` executes the RMST analysis and outputs the RMST for each treatment group as well as the square root of the variance for the difference in means estimate. This file also contains simulations where we try different time windows and evaluate the variance.
 - The file ``plot_simulation_results.R`` plots simulation results from the variance simulations in the ``rmst_analysis.R`` file.
@@ -205,7 +205,11 @@ Sex at birth data cleaning continued.
 
 - Collaborators asked for the list of patients that experience multiple relapses. The function find_multiple_relapse_patients in the file ``exam_based_relapse_recovery.R`` outputs a csv file of patients that experience multiple relapses.
 
-2026-04-14
+2026-04-14 to 2026-04-15
 
 - Collaborators state that we can make the definition of relapse recovery simpler, just record whether patients had complete recovery, or not. To this end, we will define the outcome as "exam-based __complete__ relapse recovery" rather than "exam-based __incomplete__ relapse recovery". The working definition of complete relapse recovery is: A patient is said to have complete relapse recovery if ALL increased functional system scores (FSS) associated with symptoms of relapse return to pre-relapse values or lower 6 months after the exam-confirmed relapse. Pre-relapse values are defined as the value(s) of the relevant FSS 6 months before the exam-confirmed relapse.
 - This is now implemented in ``exam_based_relapse_recovery.R`` in the folder ``secondary_analyses``.
+- For patient determined relapse recovery, there is only one score to keep track of. But other than that, everything should be the same. To code this outcome, we need to first find which month patients had an exam-confirmed relapse. Then find the PDDS scores around the relapse and evaluate whether there was complete recovery. This is probably easiest done in the same file as ``exam_based_relapse_recovery.R`` and renaming the file to indicate that it does two things.
+- However, a complication arises in that PDDS has missing values, just like for EDSS. Thus, we need to impute the values with MICE. We can probably do the imputation at the same time as we do the imputation for EDSS. This should align better with the research plan as well since I think one of the purposes for collecting PDDS is to make the imputation of EDSS better.
+
+ - Successfully implemented imputation of PDDS scores along with EDSS scores. However, I think I need to refactor the imputation of EDSS and PDDS to a different file. Then, ``event_time.R`` can read this imputed data directly to compute the event time.

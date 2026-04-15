@@ -144,6 +144,17 @@ edss_data <- edss_data %>%
 
 print(head(relapse_data))
 
+# read the PDDS data (note that we might need to impute this later)
+pdds_data <- data.frame(read_excel(data_file_name, sheet="pdds"))
+
+# filter the PDDS data to only patients that we are considering based
+# on the processing of relapse data above
+pdds_data <- pdds_data %>%
+    filter(PatientName %in% relapse_data$PatientName) %>%
+    filter(!(FormGroup %in% c("Interim Information", "Interim ePro", "Supplemental", "End of Trial"))) %>%
+    mutate(FormGroup = ifelse(FormGroup == "Baseline", 0, FormGroup)) %>%
+    mutate(FormGroup = as.numeric(gsub("\\D", "", FormGroup)))
+
 # define a function that takes as input a PatientName, a FormGroup month
 # representing when the relapse occurred, and a list of relevant symptoms
 # and returns whether the patient experienced full recovery, partial recovery,
@@ -199,12 +210,36 @@ determine_relapse_recovery <- function(patient, month, symptoms) {
 
 # print(determine_relapse_recovery(relapse_data$PatientName[1], relapse_data$FormGroup[1], relapse_data$symptoms[1]))
 
+# define a function that determines relapse recovery based on PDDS;
+# note that we only consider the PDDS score for this outcome, and the
+# symptoms don't matter
+pdds_relapse_recovery <- function(patient, month) {
+    # filter pdds data so that it only has the patient that we are
+    # considering
+    patient_pdds <- pdds_data %>%
+        filter(PatientName == patient)
+
+    # change the string of the month of relapse to a numeric number
+    month <- as.numeric(gsub("\\D", "", month))
+
+    print(month)
+    patient_pdds <- patient_pdds %>%
+        select(c(PatientName, FormGroup, pdds_total_score)) %>%
+        filter(FormGroup >= month-6) %>%
+        filter(FormGroup <= month+6)
+
+    print(patient_pdds)
+
+    return(0)
+}
+
 relapse_data <- relapse_data %>%
     rowwise() %>%
-    mutate(recovery = determine_relapse_recovery(PatientName, FormGroup, symptoms))
+    mutate(recovery = determine_relapse_recovery(PatientName, FormGroup, symptoms)) %>%
+    mutate(pdds_recovery = pdds_relapse_recovery(PatientName, FormGroup))
 
 print(head(relapse_data))
 
-print(nrow(relapse_data %>% filter(recovery == 1)))
-print(nrow(relapse_data %>% filter(recovery == 0)))
-print(sum(is.na(relapse_data$recovery)))
+# print(nrow(relapse_data %>% filter(recovery == 1)))
+# print(nrow(relapse_data %>% filter(recovery == 0)))
+# print(sum(is.na(relapse_data$recovery)))
