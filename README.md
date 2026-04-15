@@ -4,7 +4,8 @@ The code for data pre-processing and implementation of the restricted mean survi
 - The file ``global_variables.R`` contains declarations for global variables that are used throughout this analysis.
 - The file ``compute_censoring_time.R`` computes the censoring time for each individual.
 - The file ``get_covariate_data.R`` retrieves and cleans the baseline covariate data. The end of the file also currently contains some code that attempts to check for collinearity of the covariates.
-- The file ``event_time.R`` computes the event time (sustained disability progression) for each individual, if they experienced the event. Missing values are imputed using MICE under the MAR assumption. To run this file, it needs the outputs from the two previous files (``compute_censoring_time.R`` and ``get_covariate_data.R``). We can also run this file to impute data for EDSS and PDDS for use in other files.
+- The file ``impute_edss_pdds.R`` uses MICE to impute EDDS and PDDS values for every time point in the study and saves the imputed data into an .RDS file for future use.
+- The file ``event_time.R`` computes the event time (sustained disability progression) for each individual, if they experienced the event. Missing values for MSFC are imputed using MICE under the MAR assumption. For EDSS, we use the imputed values from ``impute_edss_pdds.R``. To run this file, it needs the outputs from the three previous files (``compute_censoring_time.R``, ``get_covariate_data.R``, and ``impute_edss_pdds.R``). 
 - The file ``combine_data.R`` combines the data computed in the above three files into one centralized dataset.
 - The file ``rmst_analysis.R`` executes the RMST analysis and outputs the RMST for each treatment group as well as the square root of the variance for the difference in means estimate. This file also contains simulations where we try different time windows and evaluate the variance.
 - The file ``plot_simulation_results.R`` plots simulation results from the variance simulations in the ``rmst_analysis.R`` file.
@@ -213,3 +214,4 @@ Sex at birth data cleaning continued.
 - However, a complication arises in that PDDS has missing values, just like for EDSS. Thus, we need to impute the values with MICE. We can probably do the imputation at the same time as we do the imputation for EDSS. This should align better with the research plan as well since I think one of the purposes for collecting PDDS is to make the imputation of EDSS better.
 
  - Successfully implemented imputation of PDDS scores along with EDSS scores. However, I think I need to refactor the imputation of EDSS and PDDS to a different file. Then, ``event_time.R`` can read this imputed data directly to compute the event time.
+- Refactoring was successful, so now imputing EDSS and PDDS data can be done separately from computing the event time.
