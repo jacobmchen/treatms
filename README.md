@@ -215,3 +215,4 @@ Sex at birth data cleaning continued.
 
  - Successfully implemented imputation of PDDS scores along with EDSS scores. However, I think I need to refactor the imputation of EDSS and PDDS to a different file. Then, ``event_time.R`` can read this imputed data directly to compute the event time.
 - Refactoring was successful, so now imputing EDSS and PDDS data can be done separately from computing the event time.
+- Finished implementation of patient-determined relapse recovery.
