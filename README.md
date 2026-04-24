@@ -216,3 +216,10 @@ Sex at birth data cleaning continued.
  - Successfully implemented imputation of PDDS scores along with EDSS scores. However, I think I need to refactor the imputation of EDSS and PDDS to a different file. Then, ``event_time.R`` can read this imputed data directly to compute the event time.
 - Refactoring was successful, so now imputing EDSS and PDDS data can be done separately from computing the event time.
 - Finished implementation of patient-determined relapse recovery.
+
+2026-04-20 to 2026-04-23
+
+- Want to investigate missingness in the updated MSIS data where we were given answers to individual questions. The answer is that there is not that much missingness at all in the MSIS-29 data. The vast majority of observations had all 29 questions answered.
+- Want to create a function in the ``global_variables.R`` file that can convert visit dates and patient ids to 6 month visit windows. Can base this function off of the function I already wrote in ``relapse_recovery.R`` that does something similar.
+- There seems to be a bug where every patient's race is set to value 0 in the covariate data. Will need to go back and check that it is properly imputed.
+- The likelihood ratio test seems to give a low p-value even when treatment is randomized. Need to investigate why this is happening and whether the significance value is less than 0.05 more often than expected. Perhaps using a bootstrap likelihood ratio test is preferable here.
