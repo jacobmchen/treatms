@@ -51,7 +51,7 @@ process_data <- function(data) {
         mutate(SiteName = gsub("/", "", SiteName)) %>%
         mutate(gender = gsub("-", "", gender)) %>%
         # binarize whether the patient is African American
-        mutate(race = ifelse(race_calculated == "BLACK OR AFRICAN AMERICAN", 1, 0)) %>%
+        mutate(race = ifelse(race_calculated == "BLACKORAFRICANAMERICAN", 1, 0)) %>%
         # binarize whether the patient is male
         mutate(gender = ifelse(gender == "Male", 1, 0)) %>%
         # one hot encode site name since these are unordered categorical variables;
@@ -66,6 +66,7 @@ process_data <- function(data) {
         # and remove the column gender non-binary
         select(-c(race_calculated, SiteName, birth_date, consent_date))
 
+    # patient 0412-021 is transgender, so their sex at birth is manually set to 1
     return_data$gender[return_data$PatientName == "0412-021"] <- 1
 
     return_data <- merge(return_data, social_status, by="PatientName") %>%
@@ -75,13 +76,19 @@ process_data <- function(data) {
     return(return_data)
 }
 
+# create a function that removes the column for risk stratification; this
+# function is to be used if it is deemed that we do not want to include
+# risk stratification as one the baseline covariates
+remove_risk_stratification <- function(data) {
+    data <- data %>%
+        select(-risk_stratification)
+
+    return(data)
+}
+
 # create a function that takes all data processing steps from the
 # baseline covariates data
 process_data_covars <- function(data) {
-    # TO-DO: replace UNKNOWN values in the data with what clinicians
-    # inputted into the risk stratification data, which should have
-    # no missing values
-
     return_data <- data %>%
         # deselect all of the variables that we are not using from the
         # baseline covars data
@@ -103,11 +110,8 @@ process_data_covars <- function(data) {
 # and baseline covariates data
 merge_char_covar_data <- function(char_data, covar_data) {
     return_data <- merge(char_data, covar_data, 
-                                    by="PatientName", all.x=TRUE) %>%
-        # remove the race columns since we are just using whether the patient
-        # is AfrAmerican
-        select(-starts_with("race_calculated"))
-
+                                    by="PatientName", all.x=TRUE) 
+        
     return(return_data)
 }
 
@@ -140,6 +144,15 @@ baseline_covars <- process_data_covars(baseline_covars)
 # covariate data
 baseline_data_all_clusters <- merge_char_covar_data(baseline_data_all_clusters, baseline_covars)
 
+# print the amount of missingness for baseline covars we
+# are adjusting for efficiency
+print(paste("early second relapse", sum(is.na(baseline_data_all_clusters$early.second.relapse))/nrow(baseline_data_all_clusters)))
+print(paste("frequent relapses", sum(is.na(baseline_data_all_clusters$frequent.relapses))/nrow(baseline_data_all_clusters)))
+print(paste("incomplete recovery", sum(is.na(baseline_data_all_clusters$incomplete.recovery))/nrow(baseline_data_all_clusters)))
+print(paste("high lesion burden", sum(is.na(baseline_data_all_clusters$high.lesion.burden))/nrow(baseline_data_all_clusters)))
+print(paste("enhancing lesions", sum(is.na(baseline_data_all_clusters$enhancing.lesions))/nrow(baseline_data_all_clusters)))
+print(paste("BS cerebellum SC", sum(is.na(baseline_data_all_clusters$BS_cerebellum_SC))/nrow(baseline_data_all_clusters)))
+
 # use MICE to impute missing values of baseline covars
 imp <- mice(baseline_data_all_clusters, m=1, maxit=20, seed=0)
 imputed_data <- complete(imp, action=1)
@@ -157,36 +170,10 @@ baseline_covars <- imputed_data %>%
 # save the baseline data as an RDS file
 saveRDS(baseline_data_all_clusters, file="baseline_data.RDS")
 
-# clean the baseline data using no clusters
-# NOTE: we don't use the predefined function here because we are not one
-# hot encoding the the site names here
-baseline_data_no_clusters <- baseline_data %>%
-    # remove the treatment group data and patient status data
-    select(-c(treatment_group, patient_status)) %>%
-    # convert the risk stratification data to 0 and 1 since it is binary
-    mutate(risk_stratification = as.numeric(factor(risk_stratification)) - 1) %>%
-    # convert the ethnicity data to 0 and 1 since it is binary
-    mutate(ethnicity = as.numeric(factor(ethnicity)) - 1) %>%
-    # binarize whether the patient is African American
-    mutate(race = ifelse(race_calculated == "BLACK OR AFRICAN AMERICAN", 1, 0)) %>%
-    # one hot encode gender and race since these are unordered
-    # categorical variables
-    dummy_cols(select_columns=c("race_calculated"), remove_first_dummy=TRUE) %>%
-    # copy the sex data from the baseline data all clusters
-    mutate(sex = baseline_data_all_clusters$sex) %>%
-    # compute the age at consent as the difference between the consent
-    # date and the birth date
-    mutate(birth_date = as.Date(birth_date, format="%m/%d/%Y")) %>%
-    mutate(consent_date = as.Date(consent_date, format="%m/%d/%Y")) %>%
-    mutate(age = as.numeric(consent_date - birth_date) %/% 365) %>%
-    # remove columns we cleaned and no longer need
-    select(-c(race_calculated, gender, SiteName, birth_date, consent_date))
-
-# hard code this one patient's sex as male
-baseline_data_no_clusters$sex[baseline_data_no_clusters$PatientName == "0412-021"] <- 1
-
-# merge with the baseline covariate data
-baseline_data_no_clusters <- merge_char_covar_data(baseline_data_no_clusters, baseline_covars)
+# create a version of the data with no clusters by taking the dataset with all
+# clusters and removing the clusters containing information regarding clusters
+baseline_data_no_clusters <- baseline_data_all_clusters %>%
+    select(-starts_with("SiteName"))
 
 # save the baseline data as an RDS file
 saveRDS(baseline_data_no_clusters, file="baseline_data_no_clusters.RDS")
@@ -208,6 +195,7 @@ baseline_data_merge_rare_clusters <- merge_char_covar_data(baseline_data_merge_r
 # save the baseline data as an RDS file
 saveRDS(baseline_data_merge_rare_clusters, file="baseline_data_merge_rare_clusters.RDS")
 
+# create a dictionary that specifies which state each site is in
 site_to_state_dict <- c(
     `Advanced Neuro Spc-0427` = "MD",
     `Allegheny-0265` = "PA",

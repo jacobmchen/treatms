@@ -146,7 +146,8 @@ imputed_data <- imputed_data %>%
 # representing when the relapse occurred, and a list of relevant symptoms
 # and returns whether the patient experienced full recovery or not
 determine_relapse_recovery <- function(patient, month, symptoms) {
-    # filter edss and pdds data so that it only has the relevant patients
+    # filter edss and pdds data so that it only has the relevant patients;
+    # the imputed_data dataframe is a global variable
     patient_data <- imputed_data %>%
         filter(PatientName == patient) 
 
