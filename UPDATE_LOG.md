@@ -218,3 +218,11 @@ Sex at birth data cleaning continued.
 2026-05-19
 
 - Add functionality to ``get_covariate_data.R`` to specify whether to include the risk stratification variable.
+
+2026-06-04
+
+- For tertiary outcomes: a linear mixed effects model with age as the time variable, and both linear and quadratic terms for age.
+
+2026-06-16
+
+- 
