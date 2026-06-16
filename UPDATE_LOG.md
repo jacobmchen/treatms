@@ -225,4 +225,5 @@ Sex at birth data cleaning continued.
 
 2026-06-16
 
-- 
+- According to the SAP, we will re-run the same (bootstrap) likelihood ratio test for most of the secondary outcomes. Thus, it will be helpful to define functions that run the likelihood ratio test for you and re-use these functions for each secondary outcome. We will implement this change by taking the implementations of the likelihood ratio tests in ``msis29.R`` and put them in ``global_variables.R``.
+- Successfully refactored code so that the ``global_variables.R`` document contains the code for the chi-square tests. ``msis29.R`` still contains some code for simulation experiments that will verify whether the bootstrap likelihood ratio test has a false positivity rate of 0.05.

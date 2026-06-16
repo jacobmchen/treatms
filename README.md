@@ -1,7 +1,7 @@
 # TREAT-MS Analysis Code
 
 The code for data pre-processing and implementation of the restricted mean survival time (RMST) analysis is contained in the folder ``primary_analysis``. The data itself is not contained in the repository due to data privacy. A short description of each file in the repository is as follows:
-- The file ``global_variables.R`` contains declarations for global variables that are used throughout this analysis.
+- The file ``global_variables.R`` contains declarations for global variables that are used throughout this analysis. Importantly, one of these global variables is the function implementing the likelihood ratio test used in the secondary analyses.
 - The file ``compute_censoring_time.R`` computes the censoring time for each individual.
 - The file ``get_covariate_data.R`` retrieves and cleans the baseline covariate data. The end of the file also currently contains some code that attempts to check for collinearity of the covariates.
 - The file ``impute_edss_pdds.R`` uses MICE to impute EDDS and PDDS values for every time point in the study and saves the imputed data into an .RDS file for future use.

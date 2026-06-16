@@ -84,3 +84,98 @@ compute_month_interval <- function(data) {
 
     return(data)
 }
+
+# declare a function that takes in a dataframe, a formula for the reduced
+# model (which does not include treatment-time coefficients), a formula
+# for the full model (which does include treatment-time coefficients) 
+# and runs a likelihood ratio test for the null hypothesis that the 
+# extra coefficients in the full model are all equal to 0, the function
+# then returns a p-value representing the probability of observing the
+# data under the null hypothesis
+# Input: (i) full dataset with treatment, outcome, covariate, and time data
+#        (ii) a formula for the reduced model
+#        (iii) a formula for the full model
+#        (iv) a string specifying the type of the outcome data
+# Output: p-value representing the probability of observing the data 
+#         under the null hypothesis
+run_chi_square_test <- function(data, formula_red, formula_full, outcome_type="continuous") {
+    if (outcome_type == "continuous") {
+        # fit a reduced model
+        model_red <- glmmTMB(formula_red, family=gaussian(link = "identity"), data=data)
+        # fit a full model
+        model_full <- glmmTMB(formula_full, family=gaussian(link = "identity"), data=data)
+    }
+
+    # run a chi-square test to get a p-value and determine whether
+    # including treatment-month interaction terms improves the fit
+    test <- anova(model_red, model_full, test="Chisq")
+
+    # return the p-value and result of the BIC score comparison
+    return(test[2,8])
+}
+
+# declare a function that takes in a dataframe, the number of bootstraps,
+# a formula for the reduced
+# model (which does not include treatment-time coefficients), a formula
+# for the full model (which does include treatment-time coefficients) 
+# and runs a bootstrap likelihood ratio test for the null hypothesis that the 
+# extra coefficients in the full model are all equal to 0, the function
+# then returns a p-value representing the probability of observing the
+# data under the null hypothesis
+### 
+# the bootstrap likelihood ratio test works by first computing the  
+# likelihood ratio for the observed data then resampling the outcome
+# a prespecified number of times and calculating a new likelihood 
+# ratio each time. The p-value is computed as the proportion of times
+# we observe a likelihood ratio larger than the observed data
+# likelihood ratio
+###
+# Input: (i) full dataset with treatment, outcome, covariate, and time data
+#        (ii) the number of bootstrap datasets to simulate
+#        (iii) a formula for the reduced model
+#        (iv) a formula for the full model
+#        (v) a string for the name of the outcome variable
+#        (vi) a string specifying the type of the outcome data
+# Output: p-value representing the probability of observing the data 
+run_bootstrap_test <- function(data, num_bootstraps, formula_red, formula_full,
+                               outcome_var, outcome_type="continuous") {
+    if (outcome_type == "continuous") {
+        # fit a reduced model
+        model_red <- glmmTMB(formula_red, family=gaussian(link = "identity"), data=data)
+
+        # fit a full model
+        model_full <- glmmTMB(formula_full, family=gaussian(link = "identity"), data=data)
+    }
+
+    # compute the log-likelihood ratio of the reduced and full model
+    LR_obs <- 2*(logLik(model_full) - logLik(model_red))
+
+    # declare a vector for storing likelihood ratios from the bootstrap
+    # samples
+    LR <- c()
+
+    # iterate through the bootstraps
+    for (b in 1:num_bootstraps) {
+        # create a copy of the data
+        data_b <- data
+        # resample the outcome from the reduced model
+        data_b[[outcome_var]] <- simulate(model_red, nsim=1)[[1]]
+
+        # refit the reduced and full models using the dataset
+        # with the resampled outcome; the update function
+        # completely refits the model
+        model_red_b <- update(model_red, data=data_b)
+        model_full_b <- update(model_full, data=data_b)
+
+        # calculate a new log-likelihood ratio from the models fitted on
+        # the bootstrap data
+        LR <- c(LR, 2*(logLik(model_full_b) - logLik(model_red_b)))
+    }
+
+    # compute the p-value as how often we observe a likelihood ratio
+    # where the full model fits better than the reduced model compared
+    # to the observed log-likelihood ratio
+    p_val <- mean(LR >= LR_obs)
+
+    return(p_val)
+}
