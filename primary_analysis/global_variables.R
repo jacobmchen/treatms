@@ -4,6 +4,9 @@
 # package for operations on manipulating data
 library(tidyverse)
 
+# package for fitting models for secondary outcomes
+library(glmmTMB)
+
 # save file name for the longitudinal data
 data_file_name <- "../longitudinal_data_set_2026-06-05.xlsx"
 
@@ -85,6 +88,21 @@ compute_month_interval <- function(data) {
     return(data)
 }
 
+###
+# Below are functions related to fitting models for the secondary outcome.
+###
+
+# declare a helper function that fits a glmmTMB model using
+# input for the formula, data, and outcome type
+fit_glmmTMB <- function(formula, data, outcome_type) {
+    if (outcome_type == "continuous")
+        model <- glmmTMB(formula, family=gaussian(link = "identity"), data=data) 
+    else if (outcome_type == "count")
+        model <- glmmTMB(formula, family=poisson(link = "log"), data=data) 
+
+    return(model)
+}
+
 # declare a function that takes in a dataframe, a formula for the reduced
 # model (which does not include treatment-time coefficients), a formula
 # for the full model (which does include treatment-time coefficients) 
@@ -99,12 +117,10 @@ compute_month_interval <- function(data) {
 # Output: p-value representing the probability of observing the data 
 #         under the null hypothesis
 run_chi_square_test <- function(data, formula_red, formula_full, outcome_type="continuous") {
-    if (outcome_type == "continuous") {
-        # fit a reduced model
-        model_red <- glmmTMB(formula_red, family=gaussian(link = "identity"), data=data)
-        # fit a full model
-        model_full <- glmmTMB(formula_full, family=gaussian(link = "identity"), data=data)
-    }
+    # fit a reduced model
+    model_red <- fit_glmmTMB(formula_red, data, outcome_type)
+    # fit a full model
+    model_full <- fit_glmmTMB(formula_full, data, outcome_type)
 
     # run a chi-square test to get a p-value and determine whether
     # including treatment-month interaction terms improves the fit
@@ -139,13 +155,10 @@ run_chi_square_test <- function(data, formula_red, formula_full, outcome_type="c
 # Output: p-value representing the probability of observing the data 
 run_bootstrap_test <- function(data, num_bootstraps, formula_red, formula_full,
                                outcome_var, outcome_type="continuous") {
-    if (outcome_type == "continuous") {
-        # fit a reduced model
-        model_red <- glmmTMB(formula_red, family=gaussian(link = "identity"), data=data)
-
-        # fit a full model
-        model_full <- glmmTMB(formula_full, family=gaussian(link = "identity"), data=data)
-    }
+    # fit a reduced model
+    model_red <- fit_glmmTMB(formula_red, data, outcome_type)
+    # fit a full model
+    model_full <- fit_glmmTMB(formula_full, data, outcome_type)
 
     # compute the log-likelihood ratio of the reduced and full model
     LR_obs <- 2*(logLik(model_full) - logLik(model_red))
@@ -178,4 +191,54 @@ run_bootstrap_test <- function(data, num_bootstraps, formula_red, formula_full,
     p_val <- mean(LR >= LR_obs)
 
     return(p_val)
+}
+
+# declare a function that takes in strings for the treatment
+# variable, month variable, outcome variable, and the dataset
+# then returns a vector containing two strings: the reduced
+# formula string and the full formula string, the reduced and full formulas
+# are the same except for that the full formula contains
+# treatment month interaction terms
+# Input: (i) a string of the name of the treatment variable
+#        (ii) a string of the name of the month variable
+#        (iii) a string of the name of the patient_id variable
+#        (iv) a string of the name of the outcome variable
+#        (v) the dataframe
+# Output: a vector containing two strings, one for the reduced
+#         formula, and one for the full formula
+create_formulas <- function(treatment, month, patient_id, outcome, data) {
+    # save a string representing the interaction term of the treatment
+    # with the month of the study
+    treatment_month <- paste0(treatment, ":factor(", month, ")")
+
+    # save a string representing the random error term for each patient
+    patient_error_term <- paste0("(1 | ", patient_id, ")")
+
+    # save a string representing the coefficients for the month
+    month_term <- paste0("factor(", month, ")")
+
+    # save the list of covariates, which is all of the columns except
+    # the treatment variable, patient ids, and the month
+    covariates <- colnames(data)
+    covariates <- covariates[!covariates %in% c(treatment, patient_id, month, outcome)]
+
+    # if data contains time as a factor, the formula needs to include month
+    # as a categorical variable, otherwise, the formula can just be outcome
+    # as a function of covariates and the treatment term for the full model
+    if (month != "") {
+        # create the formula of the reduced model, which does not have the interaction
+        # term between treatment and month of study
+        formula_red <- paste(outcome, " ~ ", paste(c(paste(covariates, collapse=" + "), month_term, patient_error_term), collapse=" + "))
+
+        # create the formula of the full model, which does have the interaction
+        # term between the treatment and month of study
+        formula_full <- paste(outcome, " ~ ", paste(c(paste(covariates, collapse=" + "), month_term, treatment_month, patient_error_term), collapse=" + "))
+    } else {
+        formula_red <- paste(outcome, " ~ ", paste(covariates, collapse=" + "))
+
+        formula_full <- paste(outcome, " ~ ", paste(c(paste(covariates, collapse=" + "), treatment), collapse=" + "))
+    }
+    
+    # return the reduced and full formula strings
+    return(c(formula_red, formula_full))
 }
