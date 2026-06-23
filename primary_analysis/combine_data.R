@@ -20,7 +20,7 @@ event_times <- event_times %>% select(PatientName, event_time)
 combine_data <- function(covariate_data, censoring_times, event_times, treatment_assignment) {
     # combine the data
     full_data <- left_join(covariate_data, censoring_times, by="PatientName")
-    full_data <- full_join(full_data, event_times, by="PatientName")
+    full_data <- left_join(full_data, event_times, by="PatientName")
 
     # add a column of 0s and 1s generated randomly to represent treatment
     # group

@@ -86,41 +86,42 @@ create_dlong <- function(data) {
 # set the restriction time at 84 months
 tau <- 84
 
-# read the data
-data <- readRDS("full_data_all_clusters.RDS")
+# # read the data
+# data <- readRDS("full_data_all_clusters.RDS")
+#
+# # create long form data using the data with all clusters
+# dlong_all <- create_dlong(data)
+#
+# print("RMST estimate for all clusters")
+# print(tmle(dlong_all, tau))
+#
+# # read the data
+# data <- readRDS("full_data_no_clusters.RDS")
+#
+# # create long form data using the data with all clusters
+# dlong_no <- create_dlong(data)
+#
+# print("RMST estimate for no clusters")
+# print(tmle(dlong_no, tau))
+#
+# # read the data
+# data <- readRDS("full_data_merge_rare_clusters.RDS")
+#
+# # create long form data using the data with all clusters
+# dlong_rare <- create_dlong(data)
+#
+# print("RMST estimate for rare clusters")
+# print(tmle(dlong_rare, tau))
+#
+# # read the data
+# data <- readRDS("full_data_merge_states.RDS")
+#
+# # create long form data using the data with all clusters
+# dlong_states <- create_dlong(data)
+#
+# print("RMST estimate for state clusters")
+# print(tmle(dlong_states, tau))
 
-# create long form data using the data with all clusters
-dlong_all <- create_dlong(data)
-
-print("RMST estimate for all clusters")
-print(tmle(dlong_all, tau))
-
-# read the data
-data <- readRDS("full_data_no_clusters.RDS")
-
-# create long form data using the data with all clusters
-dlong_no <- create_dlong(data)
-
-print("RMST estimate for no clusters")
-print(tmle(dlong_no, tau))
-
-# read the data
-data <- readRDS("full_data_merge_rare_clusters.RDS")
-
-# create long form data using the data with all clusters
-dlong_rare <- create_dlong(data)
-
-print("RMST estimate for rare clusters")
-print(tmle(dlong_rare, tau))
-
-# read the data
-data <- readRDS("full_data_merge_states.RDS")
-
-# create long form data using the data with all clusters
-dlong_states <- create_dlong(data)
-
-print("RMST estimate for state clusters")
-print(tmle(dlong_states, tau))
 # see if the difference covers zero by computing Wald-type confidence intervals
 # where the point estimate is the difference in theta and the standard error is the
 # estimate given, still need to multiply critical values from standard normal distribution
@@ -160,4 +161,61 @@ time_restriction_simulation <- function(dlong) {
     saveRDS(variance_data, file="simulation_results.RDS")
 }
 
-time_restriction_simulation(dlong_all)
+# time_restriction_simulation(dlong_all)
+
+set.seed(0)
+
+# declare a function that, when run, runs a simulation study on
+# the power of the rmst analysis in detecting an effect size of 12 months /
+# 1 year
+power_simulation <- function(num_simulations) {
+    # read the data with states 
+    data <- readRDS("full_data_merge_states.RDS")
+
+    num_success <- 0
+
+    for (i in 1:num_simulations) {
+        # make a copy of the original dataset
+        cur_data <- data
+
+        # simulate treatment assignments again
+        treatment_assignment <- rbinom(nrow(cur_data), 1, 0.5)
+
+        # make the new simulated treatments the treatments
+        cur_data$treatment_group <- treatment_assignment
+
+        # for each person's event time, if they are in the treatment
+        # group, increase it by 12 months
+        cur_data <- cur_data %>%
+            mutate(event_time = ifelse(treatment_group == 1 & !is.na(event_time) & is.finite(event_time),
+                                       event_time + 12,
+                                       event_time))
+
+        # sample the dataset with the specified sample size
+        cur_data <- cur_data %>%
+            slice_sample(n=200, replace=FALSE)
+
+        # create long form data using the data with all clusters
+        dlong_states <- create_dlong(cur_data)
+
+        # run the RMST analysis and get the outputs
+        output <- tmle(dlong_states, tau)
+
+        # compute the difference
+        difference <- output$theta[2] - output$theta[1]
+        # get the estimated standard error
+        sdn <- output$sdn
+        # compute the confidence interval
+        conf_int <- c(difference - 1.96*sdn, difference+1.96*sdn)
+        print(difference)
+        print(conf_int)
+
+        if (conf_int[1] > 0) {
+            num_success <- num_success + 1
+        }
+    }
+
+    return(num_success / num_simulations)
+}
+
+power_simulation(100)

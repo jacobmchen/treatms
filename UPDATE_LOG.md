@@ -227,3 +227,9 @@ Sex at birth data cleaning continued.
 
 - According to the SAP, we will re-run the same (bootstrap) likelihood ratio test for most of the secondary outcomes. Thus, it will be helpful to define functions that run the likelihood ratio test for you and re-use these functions for each secondary outcome. We will implement this change by taking the implementations of the likelihood ratio tests in ``msis29.R`` and put them in ``global_variables.R``.
 - Successfully refactored code so that the ``global_variables.R`` document contains the code for the chi-square tests. ``msis29.R`` still contains some code for simulation experiments that will verify whether the bootstrap likelihood ratio test has a false positivity rate of 0.05.
+
+2026-06-23
+
+- We hope to run simulations for the RMST analysis that give a sense as to how well the output of our analysis will cover the true causal effect without raising a false negative.
+- We can do this by first randomly assigning treatment still, then go in and tweak the time to event outcomes only for those that were assigned treatment using a prespecified value. This works because after randomly assigning treatment, the mean for both potential outcomes should be just equal to the sample mean of the overall dataset. Then, after tweaking the outcome for those randomly assigned treatment, we will have artificially created a causal effect.
+- We are trying to figure out the sample size needed to detect a certain causal effect.
