@@ -172,7 +172,11 @@ power_simulation <- function(num_simulations) {
     # read the data with states 
     data <- readRDS("full_data_merge_states.RDS")
 
+    # declare a variable to record the number of "successful" confidence
+    # intervals
     num_success <- 0
+    # declare a vector for storing point estimates from the simulations
+    point_estimates <- c()
 
     for (i in 1:num_simulations) {
         # make a copy of the original dataset
@@ -188,12 +192,12 @@ power_simulation <- function(num_simulations) {
         # group, increase it by 12 months
         cur_data <- cur_data %>%
             mutate(event_time = ifelse(treatment_group == 1 & !is.na(event_time) & is.finite(event_time),
-                                       event_time + 12,
+                                       event_time + 6,
                                        event_time))
 
         # sample the dataset with the specified sample size
         cur_data <- cur_data %>%
-            slice_sample(n=200, replace=FALSE)
+            slice_sample(n=450, replace=FALSE)
 
         # create long form data using the data with all clusters
         dlong_states <- create_dlong(cur_data)
@@ -210,12 +214,14 @@ power_simulation <- function(num_simulations) {
         print(difference)
         print(conf_int)
 
+        point_estimates <- c(point_estimates, difference)
+
         if (conf_int[1] > 0) {
             num_success <- num_success + 1
         }
     }
 
-    return(num_success / num_simulations)
+    return(c(num_success / num_simulations, mean(point_estimates)))
 }
 
 power_simulation(100)
