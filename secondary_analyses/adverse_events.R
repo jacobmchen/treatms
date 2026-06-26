@@ -6,9 +6,11 @@ source("../primary_analysis/global_variables.R")
 
 # package for real excel files
 library(readxl)
+library(lubridate)
 
 # read the adverse events data data
 adverse_events <- data.frame(read_excel(data_file_name, sheet="AEs"))
+serious_adverse_events <- data.frame(read_excel(data_file_name, sheet="SAEs"))
 
 print("total number of rows in dataset")
 print(nrow(adverse_events))
@@ -24,6 +26,59 @@ print(sum(is.na(adverse_events$ae_describe_event)))
 
 print("number of unique patients in dataset")
 print(length(unique(adverse_events$PatientName)))
+
+# get the patients for whom there is an adverse event described
+# but a missing value for action taken
+no_action_patients <- adverse_events %>%
+    filter(!is.na(ae_describe_event)) %>%
+    filter(is.na(dmt_action_taken))
+
+print(nrow(no_action_patients))
+print(head(no_action_patients))
+# write.csv(no_action_patients, "no_action_patients.csv", row.names=FALSE)
+
+# get patients with serious adverse event
+adverse_events_serious_only <- adverse_events %>%
+    filter(!is.na(ae_describe_event)) %>%
+    filter(sae_yes_no == "Yes") 
+    # filter(is.na(ae_onset_date))
+
+# write.csv(adverse_events_serious_only, "sae_no_onset_date.csv", row.names=FALSE)
+
+print(head(adverse_events_serious_only))
+
+# make sure each serious adverse event has a corresponding entry in 
+# the SAEs tab by iterating over patients with sae
+for (i in 1:nrow(adverse_events_serious_only)) {
+    # get patient id and ae onset date
+    id <- adverse_events_serious_only$PatientName[i]
+    month <- month(adverse_events_serious_only$ae_onset_date[i])
+    year <- year(adverse_events_serious_only$ae_onset_date[i])
+
+    # first make sure values are not missing
+    if (is.na(id) || is.na(month)) {
+        print("missing values")
+        print(id)
+        print(month)
+        print(year)
+        next
+    }
+
+    # see if there is a row in the sae tab that matches up by
+    # patient name and onset month and year
+    subset <- serious_adverse_events %>%
+        filter(month(sae_date) == month & year(sae_date) == year & PatientName == id)
+
+    if (nrow(subset) == 0) {
+        print("no match")
+        print(id)
+        print(month)
+        print(year)
+    }
+}
+
+# temporarily exit program early
+q()
 
 # data processing for adverse events
 adverse_events <- adverse_events %>%

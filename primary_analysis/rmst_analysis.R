@@ -189,11 +189,15 @@ power_simulation <- function(num_simulations) {
         cur_data$treatment_group <- treatment_assignment
 
         # for each person's event time, if they are in the treatment
-        # group, increase it by 12 months
+        # group, increase it by 6 months
         cur_data <- cur_data %>%
             mutate(event_time = ifelse(treatment_group == 1 & !is.na(event_time) & is.finite(event_time),
                                        event_time + 6,
-                                       event_time))
+                                       event_time)) %>%
+            # if after increasing the event time it becomes greater than the
+            # censoring time, make it a missing value; also take care not to
+            # change missing and infinite values (infinite values means event never occurred)
+            mutate(event_time = ifelse(event_time > censor & !is.na(event_time) & is.finite(event_time), NA, event_time))
 
         # sample the dataset with the specified sample size
         cur_data <- cur_data %>%
