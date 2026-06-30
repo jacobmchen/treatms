@@ -68,6 +68,7 @@ n_bootstrap <- 200
 # count how often we find that fitting a randomized treatment value
 # helps
 significant <- 0
+significant_bootstrap <- 0
 
 # repeat for a certain number of simulations
 for (i in 1:n_sim) {
@@ -78,26 +79,24 @@ for (i in 1:n_sim) {
         ungroup()
 
     # run a chi square test
-    # output <- run_chi_square_test(msis)
-    # pval <- output[1]
-    # cur_bic <- output[2]
-    #
-    # if (pval < 0.05) {
-    #     significant <- significant + 1
-    # }
-    # if (cur_bic == 1) {
-    #     bic_test <- bic_test + 1
-    # }
+    pval <- run_chi_square_test(msis, formula_red, formula_full, "continuous")
+    
+    if (pval < 0.05) {
+        significant <- significant + 1
+    }
 
     # run a bootstrap test
     pval <- run_bootstrap_test(msis, n_bootstrap, formula_red, formula_full, "msis29_score", "continuous")
     # if the p-value is less than 0.05, count this test as significant
-    if (pval < 0.05)
-        significant <- significant + 1
+    if (pval < 0.05) {
+        significant_bootstrap <- significant_bootstrap + 1
+    }
 }
 
 # print the number of significant tests
-print("number of significant simulations")
-print(significant)
 print("total number of simulations")
 print(n_sim)
+print("number of significant simulations for likelihood ratio test")
+print(significant)
+print("number of significant simulations for bootstrap likelihood ratio test")
+print(significant_bootstrap)
