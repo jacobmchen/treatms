@@ -47,42 +47,57 @@ formulas <- create_formulas("treatment", "month", "PatientName", "msis29_score",
 formula_red <- as.formula(formulas[1])
 formula_full <- as.formula(formulas[2])
 
+# print that what follows are just warmups
+print("warm up tests")
+
 # run a single chi-square test
 print(run_chi_square_test(msis, formula_red, formula_full, "continuous"))
 
 # run a bootstrap likelihood ratio test
 print(run_bootstrap_test(msis, 2, formula_red, formula_full, "msis29_score", "continuous"))
 
-# # count how often we find that fitting a randomized treatment value
-# # helps
-# significant <- 0
-#
-# # repeat for a certain number of simulations
-# for (i in 1:20) {
-#     # create a dummy treatment variable
-#     msis <- msis %>%
-#         group_by(PatientName) %>%
-#         mutate(treatment = rbinom(1, size=1, prob=0.5)) %>%
-#         ungroup()
-#
-#     # run a chi square test
-#     # output <- run_chi_square_test(msis)
-#     # pval <- output[1]
-#     # cur_bic <- output[2]
-#     #
-#     # if (pval < 0.05) {
-#     #     significant <- significant + 1
-#     # }
-#     # if (cur_bic == 1) {
-#     #     bic_test <- bic_test + 1
-#     # }
-#
-#     # run a bootstrap test
-#     pval <- run_bootstrap_test(msis, 20)
-#     # if the p-value is less than 0.05, count this test as significant
-#     if (pval < 0.05)
-#         significant <- significant + 1
-# }
-# # print the number of significant tests
-# print(significant)
-# # print(bic_test)
+# print that we are starting simulations
+print("start simulations")
+
+# define number of simulations to run
+n_sim <- 100
+
+# define number of bootstraps to run for each bootstrap test
+n_bootstrap <- 200
+
+# count how often we find that fitting a randomized treatment value
+# helps
+significant <- 0
+
+# repeat for a certain number of simulations
+for (i in 1:n_sim) {
+    # create a dummy treatment variable
+    msis <- msis %>%
+        group_by(PatientName) %>%
+        mutate(treatment = rbinom(1, size=1, prob=0.5)) %>%
+        ungroup()
+
+    # run a chi square test
+    # output <- run_chi_square_test(msis)
+    # pval <- output[1]
+    # cur_bic <- output[2]
+    #
+    # if (pval < 0.05) {
+    #     significant <- significant + 1
+    # }
+    # if (cur_bic == 1) {
+    #     bic_test <- bic_test + 1
+    # }
+
+    # run a bootstrap test
+    pval <- run_bootstrap_test(msis, n_bootstrap, formula_red, formula_full, "msis29_score", "continuous")
+    # if the p-value is less than 0.05, count this test as significant
+    if (pval < 0.05)
+        significant <- significant + 1
+}
+
+# print the number of significant tests
+print("number of significant simulations")
+print(significant)
+print("total number of simulations")
+print(n_sim)
