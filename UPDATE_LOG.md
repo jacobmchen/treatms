@@ -233,3 +233,9 @@ Sex at birth data cleaning continued.
 - We hope to run simulations for the RMST analysis that give a sense as to how well the output of our analysis will cover the true causal effect without raising a false negative.
 - We can do this by first randomly assigning treatment still, then go in and tweak the time to event outcomes only for those that were assigned treatment using a prespecified value. This works because after randomly assigning treatment, the mean for both potential outcomes should be just equal to the sample mean of the overall dataset. Then, after tweaking the outcome for those randomly assigned treatment, we will have artificially created a causal effect.
 - We are trying to figure out the sample size needed to detect a certain causal effect.
+
+2026-06-30
+
+- Added a .sh file that runs the bootstrap likelihood ratio test simulation on the slurm machine for the biostats cluster.
+- The bootstrap likelihood ratio test simulation is in the file ``msis29.R``. There are 100 simulations for assignment of the treatments and each bootstrap test repeats 200 times.
+- It may be necessary to extend the time needed to run the simulations, in which case can just edit the .sh file for the script running the simulations.
