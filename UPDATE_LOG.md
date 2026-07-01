@@ -246,3 +246,4 @@ Sex at birth data cleaning continued.
 - Added a new file ``likelihood_ratio_sim.R`` explicitly for running the bootstrap likelihood ratio test simulations.
 - Now going to try the bootstrap likelihood ratio test except turn up the number of bootstraps to 1000. Also updated the script for the simulation to run in parallel instead.
 - Will also need to write a script that interprets the results of the simulations in 100 separate files.
+- Also creating a new script that evaluates the magnitude of exception findings in EDSS.
