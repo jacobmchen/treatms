@@ -239,3 +239,10 @@ Sex at birth data cleaning continued.
 - Added a .sh file that runs the bootstrap likelihood ratio test simulation on the slurm machine for the biostats cluster.
 - The bootstrap likelihood ratio test simulation is in the file ``msis29.R``. There are 100 simulations for assignment of the treatments and each bootstrap test repeats 200 times.
 - It may be necessary to extend the time needed to run the simulations, in which case can just edit the .sh file for the script running the simulations.
+
+2026-07-01
+
+- The simulations from yesterday did not turn out as expected; the Type I error rate for the bootstrap likelihood ratio test was 27%, only slightly better than the normal likelihood ratio test Type I error rate of 29%.
+- Added a new file ``likelihood_ratio_sim.R`` explicitly for running the bootstrap likelihood ratio test simulations.
+- Now going to try the bootstrap likelihood ratio test except turn up the number of bootstraps to 1000. Also updated the script for the simulation to run in parallel instead.
+- Will also need to write a script that interprets the results of the simulations in 100 separate files.
