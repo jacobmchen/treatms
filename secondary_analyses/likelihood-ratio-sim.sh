@@ -5,7 +5,7 @@
 ##SBATCH --cpus-per-task=6 
 
 # comment out to request time limit of two days
-##SBATCH --time=2-00:00:00
+#SBATCH --time=2-00:00:00
 
 # name the output and error files
 #SBATCH --output=result_likelihood_ratio-%j.log
