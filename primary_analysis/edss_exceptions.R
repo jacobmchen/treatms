@@ -32,6 +32,7 @@ print(mean(edss$percent_fs))
 
 print(edss %>% filter(percent_fs > 0.8))
 print(nrow(edss %>% filter(percent_fs == 0)))
+print(nrow(edss %>% filter(percent_fs <= 0.2)))
 
 png(filename="percent_exception.png", width=800, height=600, res=100)
 
