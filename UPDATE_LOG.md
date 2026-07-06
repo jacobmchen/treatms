@@ -254,3 +254,4 @@ Sex at birth data cleaning continued.
 - Hopefully, the code will be mostly reusable for most of these outcomes. The analysis of each outcome will be in appropriately named files for each of them.
 - Note that for PDDS we need to fit an ordinal outcome.
 - Also updated the models we fit for adverse events to account for censoring time and number of followups.
+- Updated the file ``event_time.R`` to save intermediate data frames for t25fw and nhpt data for use as secondary outcomes.

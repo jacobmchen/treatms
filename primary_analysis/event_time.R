@@ -162,6 +162,9 @@ t25fw_event_time <- msfc_data %>%
 # use MICE to impute missing values for msfc data in between visits
 imp <- mice(t25fw_event_time, m=1, maxit=20, seed=0)
 
+# save as RDS file the t25fw data for use as a secondary outcome
+saveRDS(complete(imp, action=1), file="t25fw_data.RDS")
+
 # compute the event time after filling in missing values with MICE
 t25fw_event_time <- complete(imp, action=1) %>%
     select(PatientName, month, trial_average_seconds) %>%
@@ -202,6 +205,9 @@ nhpt_dominant_event_time <- msfc_data %>%
 # use MICE to impute missing values for msfc data in between visits
 imp <- mice(nhpt_dominant_event_time, m=1, maxit=20, seed=0)
 
+# save as RDS file the nhpt data for use as a secondary outcome
+saveRDS(complete(imp, action=1), file="nhpt_dom_data.RDS")
+
 # compute the event time after filling in missing values with MICE
 nhpt_dominant_event_time <- complete(imp, action=1) %>%
     select(PatientName, month, dominant_hand_average_seconds) %>%
@@ -241,6 +247,9 @@ nhpt_non_dominant_event_time <- msfc_data %>%
 
 # use MICE to impute missing values for msfc data in between visits
 imp <- mice(nhpt_non_dominant_event_time, m=1, maxit=20, seed=0)
+
+# save as RDS file the nhpt data for use as a secondary outcome
+saveRDS(complete(imp, action=1), file="nhpt_nondom_data.RDS")
 
 # compute the event time after filling in missing values with MICE
 nhpt_non_dominant_event_time <- complete(imp, action=1) %>%

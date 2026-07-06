@@ -21,7 +21,6 @@ data <- data %>%
     # change the outcome to factor
     mutate(pdds_total_score = factor(pdds_total_score))
 
-
 # set the seed so that the experiments are reproducible
 set.seed(0)
 
