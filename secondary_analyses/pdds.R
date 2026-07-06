@@ -32,6 +32,9 @@ data <- data %>%
 
 print(colnames(data))
 
+# temporarily truncate data
+# data <- data %>% slice_head(n=50)
+
 formulas <- create_formulas("treatment", "month", "PatientName", "pdds_total_score", data)
 formula_red <- as.formula(formulas[1])
 formula_full <- as.formula(formulas[2])

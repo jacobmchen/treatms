@@ -1,4 +1,4 @@
-# code for evaluating the secondary outcome timed 25 foot walk
+# code for evaluating the secondary outcome msfc
 # this outcome will be treated as continuous
 
 # read the global variables

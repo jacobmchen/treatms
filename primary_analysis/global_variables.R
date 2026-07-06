@@ -129,6 +129,19 @@ run_chi_square_test <- function(data, formula_red, formula_full, outcome_type="c
     # fit a full model
     model_full <- fit_glmmTMB(formula_full, data, outcome_type)
 
+    # if outcome type is categorical, compute the likelihood
+    # ratio test manually to avoid mysterious error
+    if (outcome_type == "categorical") {
+        LL_red  <- logLik(model_red)
+        LL_full <- logLik(model_full)
+
+        LR <- 2 * (LL_full - LL_red)
+        df <- attr(LL_full, "df") - attr(LL_red, "df")
+        p <- pchisq(LR, df = df, lower.tail = FALSE)
+
+        return(as.numeric(p))
+    }
+
     # run a chi-square test to get a p-value and determine whether
     # including treatment-month interaction terms improves the fit
     test <- anova(model_red, model_full, test="Chisq")
