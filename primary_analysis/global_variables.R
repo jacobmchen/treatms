@@ -26,6 +26,10 @@ compute_average_msfc <- function(msfc_data) {
         mutate(dominant_hand_average_seconds = (dominant_hand_t1_seconds + dominant_hand_t2_seconds)/2) %>%
         mutate(non_dominant_hand_average_seconds = (non_dom_hand_t1_seconds + non_dom_hand_t2_seconds)/2)
 
+    # exception handling for patient with incorecctly entered 0 values
+    msfc_data <- msfc_data %>%
+        mutate(dominant_hand_average_seconds = ifelse(PatientName == "0216-012" & FormGroup == "Month 42", NA, dominant_hand_average_seconds))
+
     return(msfc_data)
 }
 
