@@ -247,3 +247,10 @@ Sex at birth data cleaning continued.
 - Now going to try the bootstrap likelihood ratio test except turn up the number of bootstraps to 1000. Also updated the script for the simulation to run in parallel instead.
 - Will also need to write a script that interprets the results of the simulations in 100 separate files.
 - Also creating a new script that evaluates the magnitude of exception findings in EDSS.
+
+2026-07-06
+
+- We need to code the analysis of 6 outcome variables: PDDS, MSFC, T25FW, 9HPT, PASAT, LCVA.
+- Hopefully, the code will be mostly reusable for most of these outcomes. The analysis of each outcome will be in appropriately named files for each of them.
+- Note that for PDDS we need to fit an ordinal outcome.
+- Also updated the models we fit for adverse events to account for censoring time and number of followups.

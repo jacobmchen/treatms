@@ -6,6 +6,7 @@ library(tidyverse)
 
 # package for fitting models for secondary outcomes
 library(glmmTMB)
+library(ordinal)
 
 # save file name for the longitudinal data
 data_file_name <- "../longitudinal_data_set_2026-06-05.xlsx"
@@ -99,6 +100,8 @@ fit_glmmTMB <- function(formula, data, outcome_type) {
         model <- glmmTMB(formula, family=gaussian(link = "identity"), data=data) 
     else if (outcome_type == "count")
         model <- glmmTMB(formula, family=poisson(link = "log"), data=data) 
+    else if (outcome_type == "categorical")
+        model <- clmm(formula, data=data)
 
     return(model)
 }
@@ -204,9 +207,10 @@ run_bootstrap_test <- function(data, num_bootstraps, formula_red, formula_full,
 #        (iii) a string of the name of the patient_id variable
 #        (iv) a string of the name of the outcome variable
 #        (v) the dataframe
+#        (vi) a string in formula form for what to add on to the treatment (blank by default)
 # Output: a vector containing two strings, one for the reduced
 #         formula, and one for the full formula
-create_formulas <- function(treatment, month, patient_id, outcome, data) {
+create_formulas <- function(treatment, month, patient_id, outcome, data, treatment_addon="") {
     # save a string representing the interaction term of the treatment
     # with the month of the study
     treatment_month <- paste0(treatment, ":factor(", month, ")")
@@ -221,6 +225,10 @@ create_formulas <- function(treatment, month, patient_id, outcome, data) {
     # the treatment variable, patient ids, and the month
     covariates <- colnames(data)
     covariates <- covariates[!covariates %in% c(treatment, patient_id, month, outcome)]
+
+    # if there is something to add on to the treatment, do it here
+    if (treatment_addon != "")
+        treatment <- paste0(treatment, " + ", treatment_addon)
 
     # if data contains time as a factor, the formula needs to include month
     # as a categorical variable, otherwise, the formula can just be outcome
