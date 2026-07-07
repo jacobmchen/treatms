@@ -27,21 +27,50 @@ data <- data.frame(read_excel(data_file_name, sheet="msfc")) %>%
     rename(pasat = pasat_forma) %>%
     # keep only observed rows of PASAT; note that this will get
     # rid of patients who have no observed PASAT values
+    # we also don't impute the value of PASAT, just use observed
+    # values
     filter(!is.na(pasat)) %>%
     # group by patient name
     group_by(PatientName) %>%
-    # fill in the observation gaps for each patient
-    complete(month=full_seq(month, 6)) %>%
     # merge in the covariate data
-    inner_join(covariate_data, by="PatientName")
-
-# use MICE to impute missing values for PASAT in between visits
-imp <- mice(data, m=1, maxit=20, seed=0)
-
-data <- complete(imp, action=1)
+    inner_join(covariate_data, by="PatientName") %>%
+    ungroup()
 
 # save as RDS the imputed pasat data
-saveRDS(data, file="imputed_pasat.RDS")
+saveRDS(data, file="observed_pasat.RDS")
+
+# look at the site data and see which sites are recording
+# PASAT at lower rates
+site_pasat_data <- data.frame(read_excel(data_file_name, sheet="msfc")) %>%
+    # take the FormGroup string and change it to a number
+    mutate(month = as.integer(gsub("Month ", "", FormGroup))) %>%
+    # keep only relevant columns
+    select(c(PatientName, month, SiteName, trial_one_seconds, pasat_forma, pasat_formb)) %>%
+    # if form A value is unobserved, copy over form B value
+    mutate(pasat_forma = ifelse(is.na(pasat_forma), pasat_formb, pasat_forma)) %>%
+    # delete the column for form B
+    select(-pasat_formb) %>%
+    # rename the form A column as just PASAT
+    rename(pasat = pasat_forma) %>%
+    # keep only observed rows of PASAT; note that this will get
+    # rid of patients who have no observed PASAT values
+    filter(!is.na(trial_one_seconds)) %>%
+    select(-trial_one_seconds) %>%
+    # group by the sites
+    group_by(SiteName) %>%
+    # count the number of NAs for each site and rows for each
+    # site and also save the percentage of NAs
+    summarise(
+        total_rows = n(),
+        na_count = sum(is.na(pasat)),
+        na_fraction = na_count / total_rows
+    ) %>%
+    ungroup() %>%
+    arrange(desc(na_fraction)) %>%
+    filter(na_fraction > 0.5)
+ 
+print(site_pasat_data)
+write.csv(site_pasat_data, file="site_pasat_data.csv", row.names=FALSE)
 
 # set the seed so that the experiments are reproducible
 set.seed(0)
