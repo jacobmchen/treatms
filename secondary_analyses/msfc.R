@@ -16,12 +16,14 @@ nhpt_nondom <- readRDS("../primary_analysis/nhpt_nondom_data.RDS") %>%
 nhpt_dom <- readRDS("../primary_analysis/nhpt_dom_data.RDS") %>%
     select(c(PatientName, month, dominant_hand_average_seconds))
 
-# read the imputed pasat data
-pasat <- readRDS("imputed_pasat.RDS") %>%
+# read the observed pasat data, which is observed only every year
+pasat <- readRDS("observed_pasat.RDS") %>%
     select(c(PatientName, month, pasat))
 
 data <- t25fw %>%
     # join the three metrics needed to compute msfc
+    # we do an inner join here so that rows where PASAT is
+    # not observed will be ignored
     inner_join(nhpt_nondom, by=c("PatientName", "month")) %>%
     inner_join(nhpt_dom, by=c("PatientName", "month")) %>%
     inner_join(pasat, by=c("PatientName", "month")) %>%
