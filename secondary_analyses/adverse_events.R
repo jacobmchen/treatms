@@ -80,6 +80,11 @@ serious_adverse_events <- data.frame(read_excel(data_file_name, sheet="SAEs"))
 # # temporarily exit program early
 # q()
 
+# if the event is a pregnancy and the action taken is NA, replace
+# by None
+adverse_events <- adverse_events %>%
+    mutate(dmt_action_taken = ifelse(grepl("pregnancy", ae_describe_event, ignore.case=TRUE) & is.na(dmt_action_taken), "None", dmt_action_taken))
+
 # data processing for adverse events
 adverse_events <- adverse_events %>%
     # keep only rows of data where a clear action regarding

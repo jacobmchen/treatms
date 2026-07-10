@@ -52,8 +52,9 @@ site_pasat_data <- data.frame(read_excel(data_file_name, sheet="msfc")) %>%
     select(-pasat_formb) %>%
     # rename the form A column as just PASAT
     rename(pasat = pasat_forma) %>%
-    # keep only observed rows of PASAT; note that this will get
-    # rid of patients who have no observed PASAT values
+    # keep only months where PASAT was scheduled to be recorded
+    filter(month %% 12 == 0) %>%
+    # keep only rows where t25fw was also recorded as a baseline
     filter(!is.na(trial_one_seconds)) %>%
     select(-trial_one_seconds) %>%
     # group by the sites
@@ -66,29 +67,28 @@ site_pasat_data <- data.frame(read_excel(data_file_name, sheet="msfc")) %>%
         na_fraction = na_count / total_rows
     ) %>%
     ungroup() %>%
-    arrange(desc(na_fraction)) %>%
-    filter(na_fraction > 0.5)
+    arrange(desc(na_fraction))
  
 print(site_pasat_data)
 write.csv(site_pasat_data, file="site_pasat_data.csv", row.names=FALSE)
 
-# set the seed so that the experiments are reproducible
-set.seed(0)
-
-# add a randomly generated treatment to the data for simulation
-data <- data %>%
-    group_by(PatientName) %>%
-    mutate(treatment = rbinom(1, size=1, prob=0.5)) %>%
-    ungroup()
-
-print(colnames(data))
-
-formulas <- create_formulas("treatment", "month", "PatientName", "pasat", data)
-formula_red <- as.formula(formulas[1])
-formula_full <- as.formula(formulas[2])
-
-# run a single chi-square test
-print(run_chi_square_test(data, formula_red, formula_full, "continuous"))
-
-# run a bootstrap likelihood ratio test
-print(run_bootstrap_test(data, 2, formula_red, formula_full, "pasat", "continuous"))
+# # set the seed so that the experiments are reproducible
+# set.seed(0)
+#
+# # add a randomly generated treatment to the data for simulation
+# data <- data %>%
+#     group_by(PatientName) %>%
+#     mutate(treatment = rbinom(1, size=1, prob=0.5)) %>%
+#     ungroup()
+#
+# print(colnames(data))
+#
+# formulas <- create_formulas("treatment", "month", "PatientName", "pasat", data)
+# formula_red <- as.formula(formulas[1])
+# formula_full <- as.formula(formulas[2])
+#
+# # run a single chi-square test
+# print(run_chi_square_test(data, formula_red, formula_full, "continuous"))
+#
+# # run a bootstrap likelihood ratio test
+# print(run_bootstrap_test(data, 2, formula_red, formula_full, "pasat", "continuous"))
