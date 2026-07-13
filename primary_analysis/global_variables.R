@@ -37,9 +37,11 @@ compute_average_msfc <- function(msfc_data) {
 # visit dates and returns a dataframe with a new column corresponding
 # to the 6-month intervals at which the visit occurred
 # Input: data that has two columns, PatientName and visit-date
+# Optional Input: a vector of strings indicating which columns of the input
+#                 data to keep aside from visit_date and closest_month
 # Output: data with one additional column corresponding to the 6 month
 #         visit interval
-compute_month_interval <- function(data) {
+compute_month_interval <- function(data, columns_to_keep="") {
     # read the visit windows data
     visit_windows <- data.frame(read_excel(data_file_name, sheet="visit windows")) %>%
         rename(PatientName = Patient)
@@ -62,7 +64,7 @@ compute_month_interval <- function(data) {
 
     # process the data to get the closest date to the visit date
     # where the exam-confirmed relapse was detected
-    data <- merge(data, visit_windows, by="PatientName") %>%
+    data <- inner_join(data, visit_windows, by="PatientName") %>%
         # make subsequent changes occur row-wise across the whole dataframe
         rowwise() %>%
         # create a new column called closest_month as follows
@@ -85,10 +87,20 @@ compute_month_interval <- function(data) {
         mutate(closest_month = sub("open", "", closest_month)) %>%
         mutate(closest_month = sub("close", "", closest_month)) %>%
         # cast the closest_month as a numeric variable
-        mutate(closest_month = as.numeric(closest_month)) %>%
-        # keep only the columns of patient name, visit date, and the
-        # closest month
-        select(c(PatientName, visit_date, closest_month))
+        mutate(closest_month = as.numeric(closest_month)) 
+
+    # if no specific columns to keep, then keep only the PatientName,
+    # visit_date, and closest_month
+    if (columns_to_keep == "") {
+        data <- data %>%
+            # keep only the columns of patient name, visit date, and the
+            # closest month
+            select(c(PatientName, visit_date, closest_month))
+    } else {
+        # otherwise, keep also the prespecified columns
+        data <- data %>%
+            select(c(PatientName, visit_date, closest_month), all_of(columns_to_keep))
+    }
 
     return(data)
 }

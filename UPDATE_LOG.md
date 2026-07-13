@@ -255,3 +255,8 @@ Sex at birth data cleaning continued.
 - Note that for PDDS we need to fit an ordinal outcome.
 - Also updated the models we fit for adverse events to account for censoring time and number of followups.
 - Updated the file ``event_time.R`` to save intermediate data frames for t25fw and nhpt data for use as secondary outcomes.
+
+2026-07-13
+
+- Added implementations for the outcomes SDMT and NQOL.
+- Noticed that the likelihood ratio test is not returning significant results for the NQOL outcomes. Could it be that something is off with MSIS outcomes during the simulation? Can investigate.
