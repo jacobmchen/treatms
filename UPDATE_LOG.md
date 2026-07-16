@@ -260,3 +260,8 @@ Sex at birth data cleaning continued.
 
 - Added implementations for the outcomes SDMT and NQOL.
 - Noticed that the likelihood ratio test is not returning significant results for the NQOL outcomes. Could it be that something is off with MSIS outcomes during the simulation? Can investigate.
+
+2026-07-16
+
+- Received new longitudinal data, updated the file read to reflect this.
+- Updated PASAT to account for missing values and different PASAT statuses.
