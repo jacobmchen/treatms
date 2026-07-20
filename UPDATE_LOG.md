@@ -265,3 +265,9 @@ Sex at birth data cleaning continued.
 
 - Received new longitudinal data, updated the file read to reflect this.
 - Updated PASAT to account for missing values and different PASAT statuses.
+
+2026-07-20
+
+- The updated longitudinal data has missing sheets that are vital to analysis, so I changed the file read back to the previous version from June, 2026.
+- Could it be the case that data needs to be standardized before running likelihood ratio test? The NQoL data does not seem to be giving a high false positive rate compared to the MSIS-29 data.
+- It turns out that there may be a bug with my data processing for the MSIS-29 data. This may be leading to the high rate of false positives. Using this updated data processing, I will re-run the simulations to see if the false positivity rate issue is fixed.

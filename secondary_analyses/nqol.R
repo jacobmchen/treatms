@@ -9,9 +9,6 @@ source("../primary_analysis/global_variables.R")
 # package for real excel files
 library(readxl)
 
-# save the file name for the NQOL data
-nqol_file_name <- "../nqol_t_scores_03-10-2026.xlsx"
-
 # read the baseline covariate data
 covariate_data <- readRDS("../primary_analysis/baseline_data_merge_states.RDS")
 
@@ -20,13 +17,15 @@ set.seed(0)
 
 # save a list of strings representing the sheet names of
 # the nqols we have to analyze
-subscales <- c("ANX", "DEP", "FATIGUE", "COG", "POS", "SLEEP")
+subscales <- c("ANX", "DEP", "FATIGUE", "COG", "POS", "SLEEP", "SOC_ACT",
+               "SOC_SATISF", "STIGMA")
 
 for (i in 1:length(subscales)) {
     cur_subscale <- subscales[i]
     print(paste("analyzing", cur_subscale))
 
     # read the NQOL data for anxiety
+    # nqol_file_name is defined in the global_variables.R file
     data <- data.frame(read_excel(nqol_file_name, sheet=cur_subscale)) %>%
         # rename columns so that we can compute which visit month
         # each visit corresponds to

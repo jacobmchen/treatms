@@ -9,6 +9,9 @@ library(readxl)
 # read the msis-29 data
 msis <- data.frame(read_excel(data_file_name, sheet="msis"))
 
+# read the baseline covariate data
+covariate_data <- readRDS("../primary_analysis/baseline_data_merge_states.RDS")
+
 # investigate the missingness of msis
 msis <- msis %>%
     # create a new column that keeps track of how many 
@@ -19,20 +22,24 @@ msis <- msis %>%
     filter(n_missing == 0) %>%
     filter(!is.na(completion_date))
 
-# use the completion date to get a month number for every observation
-msis_month <- compute_month_interval(msis %>% select(c(PatientName, completion_date)) %>%
-                                     rename(visit_date = completion_date)) %>%
-    rename(completion_date = visit_date)
+msis <- msis %>%
+    # rename the completion date column to make sure that the
+    # compute_month_interval function runs properly
+    rename(visit_date = completion_date)
 
-msis <- merge(msis, msis_month, by=c("PatientName", "completion_date")) %>%
+# find the 6 month interval that corresponds to to the completion date
+# of the exam
+msis <- compute_month_interval(msis, c("msis29_score")) %>%
+    # select only the relevant columns
     select(c(PatientName, closest_month, msis29_score)) %>%
-    rename(month=closest_month) 
-
-# merge the covariate data in
-baseline_data <- readRDS("../primary_analysis/baseline_data_merge_states.RDS")
-
-# merge the msis data with the baseline data
-msis <- merge(msis, baseline_data, by="PatientName")
+    # rename the column closest_month to just month
+    rename(month=closest_month) %>%
+    # remove duplicate rows measured in the same "closest month"
+    distinct(PatientName, month, .keep_all=TRUE) %>%
+    # merge covariate data
+    group_by(PatientName) %>%
+    inner_join(covariate_data, by="PatientName") %>%
+    ungroup()
 
 # set the seed so that the experiments are reproducible
 set.seed(0)

@@ -21,7 +21,7 @@ baseline_data <- readRDS("../primary_analysis/baseline_data_merge_states.RDS")
 censor <- data.frame(read_excel(data_file_name, sheet="sdmt")) %>%
     # take the FormGroup string and change it to a number
     mutate(month = as.integer(gsub("Month ", "", FormGroup))) %>%
-    # keep only relevant rows
+    # keep only relevant columns
     select(c(PatientName, month, sdmt_score)) %>%
     # group data by patient name
     group_by(PatientName) %>%
