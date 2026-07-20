@@ -20,4 +20,5 @@
 
 module load R
 
+# run the script using the job number as the seed
 Rscript likelihood_ratio_sim.R $SLURM_ARRAY_TASK_ID

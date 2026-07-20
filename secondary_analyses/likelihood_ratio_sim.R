@@ -1,5 +1,3 @@
-# code for evaluating the outcome MSIS-29
-
 # read the global variables
 source("../primary_analysis/global_variables.R")
 
@@ -8,6 +6,9 @@ library(readxl)
 
 # read the msis-29 data
 msis <- data.frame(read_excel(data_file_name, sheet="msis"))
+
+# read the baseline covariate data
+covariate_data <- readRDS("../primary_analysis/baseline_data_merge_states.RDS")
 
 # investigate the missingness of msis
 msis <- msis %>%
@@ -19,20 +20,24 @@ msis <- msis %>%
     filter(n_missing == 0) %>%
     filter(!is.na(completion_date))
 
-# use the completion date to get a month number for every observation
-msis_month <- compute_month_interval(msis %>% select(c(PatientName, completion_date)) %>%
-                                     rename(visit_date = completion_date)) %>%
-    rename(completion_date = visit_date)
+msis <- msis %>%
+    # rename the completion date column to make sure that the
+    # compute_month_interval function runs properly
+    rename(visit_date = completion_date)
 
-msis <- merge(msis, msis_month, by=c("PatientName", "completion_date")) %>%
+# find the 6 month interval that corresponds to to the completion date
+# of the exam
+msis <- compute_month_interval(msis, c("msis29_score")) %>%
+    # select only the relevant columns
     select(c(PatientName, closest_month, msis29_score)) %>%
-    rename(month=closest_month) 
-
-# merge the covariate data in
-baseline_data <- readRDS("../primary_analysis/baseline_data_merge_states.RDS")
-
-# merge the msis data with the baseline data
-msis <- merge(msis, baseline_data, by="PatientName")
+    # rename the column closest_month to just month
+    rename(month=closest_month) %>%
+    # remove duplicate rows measured in the same "closest month"
+    distinct(PatientName, month, .keep_all=TRUE) %>%
+    # merge covariate data
+    group_by(PatientName) %>%
+    inner_join(covariate_data, by="PatientName") %>%
+    ungroup()
 
 # accept command line arguments and save in a list called args
 args = commandArgs(trailingOnly = TRUE)
@@ -70,7 +75,7 @@ run_likelihood_ratio_test_simulations <- function(n_sim, n_bootstrap) {
 
         # run a chi square test
         pval <- run_chi_square_test(msis, formula_red, formula_full, "continuous")
-	print(pval)
+	    print(pval)
         
         if (pval < 0.05) {
             significant <- significant + 1
@@ -78,7 +83,7 @@ run_likelihood_ratio_test_simulations <- function(n_sim, n_bootstrap) {
 
         # run a bootstrap test
         pval <- run_bootstrap_test(msis, n_bootstrap, formula_red, formula_full, "msis29_score", "continuous")
-	print(pval)
+	    print(pval)
 
         # if the p-value is less than 0.05, count this test as significant
         if (pval < 0.05) {
@@ -93,5 +98,5 @@ run_likelihood_ratio_test_simulations <- function(n_sim, n_bootstrap) {
     # print(significant_bootstrap)
 }
 
-# run the simulation
+# run a single simulation with 1000 bootstraps
 run_likelihood_ratio_test_simulations(1, 1000)
