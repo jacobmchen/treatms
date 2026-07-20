@@ -93,8 +93,6 @@ adverse_events <- adverse_events %>%
     # select only relevant columns
     select(c(PatientName, ae_describe_event, dmt_action_taken))
 
-print(sum(adverse_events$dmt_action_taken == "None"))
-
 adverse_events <- adverse_events %>%
     # remove all rows where the action taken is none
     filter(dmt_action_taken != "None")
@@ -134,8 +132,36 @@ adverse_events <- baseline_data %>%
     # replace all NAs with 0
     mutate(num_followup = ifelse(is.na(num_followup), 0, num_followup))
 
+adverse_events %>% slice_head(n=10) %>% print()
+
+# data processing for serious adverse events
+serious_adverse_events <- serious_adverse_events %>%
+    select(c(PatientName, primary_ae)) %>%
+    # count the number of times each patient appears in the serious
+    # adverse events spreadsheet
+    count(PatientName) %>%
+    rename(num_saes = n)
+
+serious_adverse_events <- baseline_data %>%
+    # merge the count of serious adverse events with the baseline data
+    left_join(serious_adverse_events, by="PatientName") %>%
+    # if there's a missing value, that corresponds to no saes
+    mutate(num_saes = ifelse(is.na(num_saes), 0, num_saes)) %>%
+    # add the censoring times to the data
+    left_join(censoring_times, by="PatientName") %>%
+    # replace all NAs with 0
+    mutate(censor = ifelse(is.na(censor), 0, censor)) %>%
+    # add the number of followups to the data
+    left_join(imputed_edss_pdds, by="PatientName") %>%
+    # replace all NAs with 0
+    mutate(num_followup = ifelse(is.na(num_followup), 0, num_followup))
+
+serious_adverse_events %>% slice_head(n=10) %>% print()
+
 # set the seed so that the experiments are reproducible
 set.seed(0)
+
+print("analyze adverse events")
 
 # add a randomly generated treatment to the data for simulation
 adverse_events <- adverse_events %>%
@@ -154,3 +180,24 @@ print(run_chi_square_test(adverse_events, formula_red, formula_full, "count"))
 
 # run a bootstrap likelihood ratio test
 print(run_bootstrap_test(adverse_events, 2, formula_red, formula_full, "num_aes", "count"))
+
+print("analyze serious adverse events")
+
+# add a randomly generated treatment to the data for simulation
+serious_adverse_events <- serious_adverse_events %>%
+    group_by(PatientName) %>%
+    mutate(treatment = rbinom(1, size=1, prob=0.5)) %>%
+    ungroup()
+
+print(colnames(serious_adverse_events))
+
+formulas <- create_formulas("treatment", "", "PatientName", "num_saes", serious_adverse_events, "treatment*censor + treatment*num_followup")
+formula_red <- as.formula(formulas[1])
+formula_full <- as.formula(formulas[2])
+
+# run a single chi-square test
+print(run_chi_square_test(serious_adverse_events, formula_red, formula_full, "count"))
+
+# run a bootstrap likelihood ratio test
+print(run_bootstrap_test(serious_adverse_events, 2, formula_red, formula_full, "num_saes", "count"))
+
