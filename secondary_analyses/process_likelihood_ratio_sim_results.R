@@ -1,7 +1,7 @@
 library(readr)
 
 # define number of output files
-num_files <- 2
+num_files <- 100
 
 # keep track of the number of significant tests
 # for each type of test
