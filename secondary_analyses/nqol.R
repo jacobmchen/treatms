@@ -12,6 +12,31 @@ library(readxl)
 # read the baseline covariate data
 covariate_data <- readRDS("../primary_analysis/baseline_data_merge_states.RDS")
 
+cols <- c("NQSAT03", "NQSAT23", "NQSAT14", "NQSAT11", "NQSAT33", "NQSAT32", "NQSAT47", "NQSAT46")
+
+data <- data.frame(read_excel(nqol_file_name, sheet="satisf_mismatch")) %>%
+    filter(!is.na(NQSAT03)) %>%
+    filter(!is.na(NQSAT23)) %>%
+    filter(!is.na(NQSAT14)) %>%
+    filter(!is.na(NQSAT11)) %>%
+    filter(!is.na(NQSAT33)) %>%
+    filter(!is.na(NQSAT32)) %>%
+    filter(!is.na(NQSAT47)) %>%
+    filter(!is.na(NQSAT46))
+print(nrow(data))
+
+data <- data %>%
+    mutate(all_5_or_all_1 = if_all(all_of(cols), ~ .x == 5) | 
+                            if_all(all_of(cols), ~ .x == 1)) %>%
+    filter(all_5_or_all_1 == TRUE)
+print(nrow(data))
+
+data %>% slice_head(n=10) %>% print()
+
+write.csv(data, "csv_files/all_5_or_all_1_satisf.csv", row.names=FALSE)
+
+q()
+
 # set a seed so that experiments are reproducible
 set.seed(0)
 
@@ -30,21 +55,6 @@ for (i in 1:length(subscales)) {
         # rename columns so that we can compute which visit month
         # each visit corresponds to
         rename(PatientName=PIN, visit_date=Assmnt)
-
-    # need to remove observations where patient answered
-    # all 1s for the positive affect/well-being question
-    if (cur_subscale == "POS") {
-        # read the data on what we have to remove
-        to_remove <- data.frame(read_excel(nqol_file_name, sheet="all 1s on pos"))
-
-        # rename columns
-        to_remove <- to_remove %>%
-            rename(visit_date=completion_date)
-
-        # remove the rows that match the patient name and the visit date
-        data <- data %>%
-            anti_join(to_remove, by=c("PatientName", "visit_date"))
-    }
 
     # compute the visit month from the visit windows data
     data <- compute_month_interval(data, c("TScore")) %>%

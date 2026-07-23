@@ -12,6 +12,19 @@ library(lubridate)
 adverse_events <- data.frame(read_excel(data_file_name, sheet="AEs"))
 serious_adverse_events <- data.frame(read_excel(data_file_name, sheet="SAEs"))
 
+data <- adverse_events %>%
+    filter(!is.na(ae_describe_event)) %>%
+    filter(dmt_action_taken == "None") %>%
+    filter(sae_yes_no == "No") %>%
+    mutate(pregnancy = ifelse(grepl("pregnancy", ae_describe_event, ignore.case=TRUE), 1, 0)) %>%
+    filter(pregnancy == 0) %>%
+    select(-pregnancy)
+
+data %>% slice_head(n=10) %>% print()
+write.csv(data, "csv_files/no_action_no_sae.csv", row.names=FALSE)
+
+q()
+
 # print("total number of rows in dataset")
 # print(nrow(adverse_events))
 #

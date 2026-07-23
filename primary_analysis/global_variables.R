@@ -12,7 +12,7 @@ library(ordinal)
 data_file_name <- "../longitudinal_data_set_2026-06-05.xlsx"
 
 # save file name for the nqol data
-nqol_file_name <- "../nqol_t_scores_03-10-2026.xlsx"
+nqol_file_name <- "../nqol_07-23-2026.xlsx"
 
 # save the string of the patient for whom we have no 
 # data for and will be removed

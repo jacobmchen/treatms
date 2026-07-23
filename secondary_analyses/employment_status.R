@@ -16,6 +16,41 @@ library(mice)
 # read the data for baseline characteristics, which was computed separately
 baseline_data <- readRDS("../primary_analysis/baseline_data_merge_states.RDS")
 
+data <- data.frame(read_excel(data_file_name, sheet="social status")) %>%
+    filter(FormGroup == "Baseline") %>%
+    filter(is.na(completion_date)) 
+
+missing_baseline <- data$PatientName
+
+data <- data.frame(read_excel(data_file_name, sheet="social status")) %>%
+    filter(PatientName %in% missing_baseline) %>%
+    filter(FormGroup == "Month 9") %>%
+    filter(!is.na(completion_date))
+
+# data %>% slice_head(n=10) %>% print()
+# print(nrow(data))
+
+# write.csv(data, "csv_files/no_baseline_yes_month9.csv", row.names=FALSE)
+
+trial_start <- data.frame(read_excel(data_file_name, sheet="visit windows")) %>%
+    select(c(Patient, open6)) %>%
+    rename(PatientName=Patient, trial_start=open6)
+
+data <- data.frame(read_excel(data_file_name, sheet="social status")) %>%
+    filter(PatientName %in% missing_baseline) %>%
+    group_by(PatientName) %>%
+    left_join(trial_start, by="PatientName") %>%
+    ungroup() %>%
+    filter(FormGroup == "Interim ePro" | FormGroup == "Supplemental") %>%
+    filter(!is.na(completion_date)) %>%
+    filter(as.numeric(difftime(completion_date, trial_start, units = "days")) <= 365)
+
+data %>% slice_head(n=10) %>% print(width=Inf)
+
+write.csv(data, "csv_files/no_baseline_yes_interim_supp.csv", row.names=FALSE)
+
+q()
+
 # read the social status data
 data <- data.frame(read_excel(data_file_name, sheet="social status")) %>%
     # select relevant columns
