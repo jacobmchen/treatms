@@ -16,52 +16,67 @@ library(mice)
 # read the data for baseline characteristics, which was computed separately
 baseline_data <- readRDS("../primary_analysis/baseline_data_merge_states.RDS")
 
+# get individuals that are missing baseline data
 data <- data.frame(read_excel(data_file_name, sheet="social status")) %>%
     filter(FormGroup == "Baseline") %>%
     filter(is.na(completion_date)) 
 
+# get list of patients that are missing baseline measurement
 missing_baseline <- data$PatientName
 
-data <- data.frame(read_excel(data_file_name, sheet="social status")) %>%
+# get list of patients that are missing a baseline measurement but have
+# month 9 data available
+missing_baseline_month9_avail <- data.frame(read_excel(data_file_name, sheet="social status")) %>%
     filter(PatientName %in% missing_baseline) %>%
     filter(FormGroup == "Month 9") %>%
-    filter(!is.na(completion_date))
+    filter(!is.na(completion_date)) 
 
 # data %>% slice_head(n=10) %>% print()
 # print(nrow(data))
 
 # write.csv(data, "csv_files/no_baseline_yes_month9.csv", row.names=FALSE)
 
-trial_start <- data.frame(read_excel(data_file_name, sheet="visit windows")) %>%
-    select(c(Patient, open6)) %>%
-    rename(PatientName=Patient, trial_start=open6)
-
-data <- data.frame(read_excel(data_file_name, sheet="social status")) %>%
-    filter(PatientName %in% missing_baseline) %>%
-    group_by(PatientName) %>%
-    left_join(trial_start, by="PatientName") %>%
-    ungroup() %>%
-    filter(FormGroup == "Interim ePro" | FormGroup == "Supplemental") %>%
-    filter(!is.na(completion_date)) %>%
-    filter(as.numeric(difftime(completion_date, trial_start, units = "days")) <= 365)
-
-data %>% slice_head(n=10) %>% print(width=Inf)
-
-write.csv(data, "csv_files/no_baseline_yes_interim_supp.csv", row.names=FALSE)
-
-q()
+### uncomment below to run code on how many people have missing baseline but
+### have interim or supplemental information within a year of the start date
+###
+# trial_start <- data.frame(read_excel(data_file_name, sheet="visit windows")) %>%
+#     select(c(Patient, open6)) %>%
+#     rename(PatientName=Patient, trial_start=open6)
+#
+# data <- data.frame(read_excel(data_file_name, sheet="social status")) %>%
+#     filter(PatientName %in% missing_baseline) %>%
+#     group_by(PatientName) %>%
+#     left_join(trial_start, by="PatientName") %>%
+#     ungroup() %>%
+#     filter(FormGroup == "Interim ePro" | FormGroup == "Supplemental") %>%
+#     filter(!is.na(completion_date)) %>%
+#     filter(as.numeric(difftime(completion_date, trial_start, units = "days")) <= 365)
+#
+# data %>% slice_head(n=10) %>% print(width=Inf)
+#
+# write.csv(data, "csv_files/no_baseline_yes_interim_supp.csv", row.names=FALSE)
+#
+# q()
 
 # read the social status data
 data <- data.frame(read_excel(data_file_name, sheet="social status")) %>%
     # select relevant columns
-    select(c(PatientName, FormGroup,
+    select(c(PatientName, FormGroup, completion_date,
              employ_status_disabled, employ_status_unemployed,
-             employ_status_working))
+             employ_status_working)) %>%
+    # only keep columns with a completion date
+    filter(!is.na(completion_date))
 
-# get a dataframe of patients who are working at baseline
+# get a dataframe of patients who are working at baseline or at month 9
+# if their baseline is missing
 working_at_baseline <- data %>%
     filter(FormGroup == "Baseline") %>%
-    filter(employ_status_working == "Working now")
+    filter(!is.na(completion_date)) %>%
+    # add info for patients who are missing at baseline but have data
+    # for month 9
+    bind_rows(missing_baseline_month9_avail) %>%
+    filter(employ_status_working == "Working now" | 
+           employ_status_student == "Student")
 
 # get the list of patients that are working at baseline
 working_at_baseline <- working_at_baseline$PatientName
@@ -87,7 +102,7 @@ data <- data %>%
     mutate(disabled_or_unemployed=disabled+unemployed) %>%
     select(-c(disabled, unemployed, working))
 
-# get the censoring time, which turns out to be 72 for every patient!
+# get the censoring time for each person
 censor <- data %>%
     # group data by patient name
     group_by(PatientName) %>%
@@ -110,7 +125,7 @@ compute_event_time <- function(months, values) {
     return(Inf)
 }
 
-# compute the event time for sdmt
+# compute the event time for time to unemployed or disabled
 event_time <- data %>% 
     group_by(PatientName) %>%
     summarise(event=compute_event_time(month, disabled_or_unemployed))
@@ -128,7 +143,9 @@ combined_data <- baseline_data %>%
     mutate(treatment=rbinom(1, size=1, prob=0.5)) %>%
     ungroup() %>%
     # get rid of rows for whom the event is a missing value
-    filter(!is.na(event))
+    filter(!is.na(event)) %>%
+    # remove rows we don't want to include as covariates
+    select(-c(completion_date, disabled_or_unemployed))
 
 # redefine the id to just be 1 through number of rows
 combined_data <- combined_data %>%
@@ -140,8 +157,8 @@ combined_data <- combined_data %>%
 
 combined_data %>% slice_head(n=10) %>% print()
 
-# define cut-off point, which is the censoring time for 
-# all patients
+# define cut-off point, which is the maximum possible censoring
+# time
 tau <- 72
 
 # create long form data using the data with all clusters

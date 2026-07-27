@@ -16,17 +16,39 @@ library(mice)
 # read the data for baseline characteristics, which was computed separately
 baseline_data <- readRDS("../primary_analysis/baseline_data_merge_states.RDS")
 
+# get individuals that are missing baseline data
+data <- data.frame(read_excel(data_file_name, sheet="social status")) %>%
+    filter(FormGroup == "Baseline") %>%
+    filter(is.na(completion_date)) 
+
+# get list of patients that are missing baseline measurement
+missing_baseline <- data$PatientName
+
+# get list of patients that are missing a baseline measurement but have
+# month 9 data available
+missing_baseline_month9_avail <- data.frame(read_excel(data_file_name, sheet="social status")) %>%
+    filter(PatientName %in% missing_baseline) %>%
+    filter(FormGroup == "Month 9") %>%
+    filter(!is.na(completion_date)) %>%
+    # select relevant columns
+    select(c(PatientName, FormGroup, completion_date,
+             marital_status)) 
+
 # read the social status data
 data <- data.frame(read_excel(data_file_name, sheet="social status")) %>%
     # select relevant columns
-    select(c(PatientName, FormGroup,
-             marital_status))
-
-print(unique(data$marital_status))
+    select(c(PatientName, FormGroup, completion_date,
+             marital_status)) %>%
+    # keep only rows where there was a completion_date
+    filter(!is.na(completion_date))
 
 # get a dataframe of patients who are working at baseline
 partnered_at_baseline <- data %>%
     filter(FormGroup == "Baseline") %>%
+    # add info for patients who are missing at baseline but have data
+    # for month 9
+    bind_rows(missing_baseline_month9_avail) %>%
+    # keep only rows where people are married or partnered
     filter(marital_status == "Married" | marital_status == "Domestic Partnership")
 
 # get the list of patients that are working at baseline
@@ -48,7 +70,7 @@ data <- data %>%
 
 data %>% slice_head(n=10) %>% print()
 
-# get the censoring time, which turns out to be 72 for every patient!
+# get the censoring time
 censor <- data %>%
     # group data by patient name
     group_by(PatientName) %>%
@@ -89,7 +111,9 @@ combined_data <- baseline_data %>%
     mutate(treatment=rbinom(1, size=1, prob=0.5)) %>%
     ungroup() %>%
     # get rid of rows for whom the event is a missing value
-    filter(!is.na(event))
+    filter(!is.na(event)) %>%
+    # remove rows we don't want to include as covariates
+    select(-c(completion_date, divorced_or_separated))
 
 # redefine the id to just be 1 through number of rows
 combined_data <- combined_data %>%
