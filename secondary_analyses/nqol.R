@@ -12,40 +12,42 @@ library(readxl)
 # read the baseline covariate data
 covariate_data <- readRDS("../primary_analysis/baseline_data_merge_states.RDS")
 
-first4 <- c("NQSAT03", "NQSAT23", "NQSAT14", "NQSAT11")
-last4 <- c("NQSAT33", "NQSAT32", "NQSAT47", "NQSAT46")
-
-data <- data.frame(read_excel(nqol_file_name, sheet="satisf_mismatch")) %>%
-    filter(!is.na(NQSAT03)) %>%
-    filter(!is.na(NQSAT23)) %>%
-    filter(!is.na(NQSAT14)) %>%
-    filter(!is.na(NQSAT11)) %>%
-    filter(!is.na(NQSAT33)) %>%
-    filter(!is.na(NQSAT32)) %>%
-    filter(!is.na(NQSAT47)) %>%
-    filter(!is.na(NQSAT46))
-print(nrow(data))
-
-data <- data %>%
-    mutate(all5_then1 = if_all(all_of(first4), ~ .x == 5) & 
-                            if_all(all_of(last4), ~ .x == 1)) %>%
-    mutate(all1_then5 = if_all(all_of(first4), ~ .x == 1) & 
-                            if_all(all_of(last4), ~ .x == 5)) %>%
-    mutate(all4_then2 = if_all(all_of(first4), ~ .x == 4) & 
-                            if_all(all_of(last4), ~ .x == 2)) %>%
-    mutate(all2_then4 = if_all(all_of(first4), ~ .x == 2) & 
-                            if_all(all_of(last4), ~ .x == 4)) %>%
-    filter(all5_then1 == TRUE | all1_then5 == TRUE | all4_then2 == TRUE
-          | all2_then4 == TRUE) %>%
-    arrange(NQSAT03)
-
-print(nrow(data))
-
-data %>% slice_head(n=10) %>% print()
-
-write.csv(data, "csv_files/satisf_problematic.csv", row.names=FALSE)
-
-q()
+### below is code used for diagnostic purposes
+###
+# first4 <- c("NQSAT03", "NQSAT23", "NQSAT14", "NQSAT11")
+# last4 <- c("NQSAT33", "NQSAT32", "NQSAT47", "NQSAT46")
+#
+# data <- data.frame(read_excel(nqol_file_name, sheet="satisf_mismatch")) %>%
+#     filter(!is.na(NQSAT03)) %>%
+#     filter(!is.na(NQSAT23)) %>%
+#     filter(!is.na(NQSAT14)) %>%
+#     filter(!is.na(NQSAT11)) %>%
+#     filter(!is.na(NQSAT33)) %>%
+#     filter(!is.na(NQSAT32)) %>%
+#     filter(!is.na(NQSAT47)) %>%
+#     filter(!is.na(NQSAT46))
+# print(nrow(data))
+#
+# data <- data %>%
+#     mutate(all5_then1 = if_all(all_of(first4), ~ .x == 5) & 
+#                             if_all(all_of(last4), ~ .x == 1)) %>%
+#     mutate(all1_then5 = if_all(all_of(first4), ~ .x == 1) & 
+#                             if_all(all_of(last4), ~ .x == 5)) %>%
+#     mutate(all4_then2 = if_all(all_of(first4), ~ .x == 4) & 
+#                             if_all(all_of(last4), ~ .x == 2)) %>%
+#     mutate(all2_then4 = if_all(all_of(first4), ~ .x == 2) & 
+#                             if_all(all_of(last4), ~ .x == 4)) %>%
+#     filter(all5_then1 == TRUE | all1_then5 == TRUE | all4_then2 == TRUE
+#           | all2_then4 == TRUE) %>%
+#     arrange(NQSAT03)
+#
+# print(nrow(data))
+#
+# data %>% slice_head(n=10) %>% print()
+#
+# write.csv(data, "csv_files/satisf_problematic.csv", row.names=FALSE)
+#
+# q()
 
 # set a seed so that experiments are reproducible
 set.seed(0)
@@ -53,7 +55,7 @@ set.seed(0)
 # save a list of strings representing the sheet names of
 # the nqols we have to analyze
 subscales <- c("ANX", "DEP", "FATIGUE", "COG", "POS", "SLEEP", "SOC_ACT",
-               "SOC_SATISF", "STIGMA")
+               "SOC_SATISF", "STIGMA", "UPPER", "LOWER")
 
 for (i in 1:length(subscales)) {
     cur_subscale <- subscales[i]

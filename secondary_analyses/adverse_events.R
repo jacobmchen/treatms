@@ -12,18 +12,20 @@ library(lubridate)
 adverse_events <- data.frame(read_excel(data_file_name, sheet="AEs"))
 serious_adverse_events <- data.frame(read_excel(data_file_name, sheet="SAEs"))
 
-data <- adverse_events %>%
-    filter(!is.na(ae_describe_event)) %>%
-    filter(dmt_action_taken == "None") %>%
-    filter(sae_yes_no == "No") %>%
-    mutate(pregnancy = ifelse(grepl("pregnancy", ae_describe_event, ignore.case=TRUE), 1, 0)) %>%
-    filter(pregnancy == 0) %>%
-    select(-pregnancy)
-
-data %>% slice_head(n=10) %>% print()
-write.csv(data, "csv_files/no_action_no_sae.csv", row.names=FALSE)
-
-q()
+### code below is for diagnostic purposes
+###
+# data <- adverse_events %>%
+#     filter(!is.na(ae_describe_event)) %>%
+#     filter(dmt_action_taken == "None") %>%
+#     filter(sae_yes_no == "No") %>%
+#     mutate(pregnancy = ifelse(grepl("pregnancy", ae_describe_event, ignore.case=TRUE), 1, 0)) %>%
+#     filter(pregnancy == 0) %>%
+#     select(-pregnancy)
+#
+# data %>% slice_head(n=10) %>% print()
+# write.csv(data, "csv_files/no_action_no_sae.csv", row.names=FALSE)
+#
+# q()
 
 # print("total number of rows in dataset")
 # print(nrow(adverse_events))
@@ -93,11 +95,6 @@ q()
 # # temporarily exit program early
 # q()
 
-# if the event is a pregnancy and the action taken is NA, replace
-# by None
-adverse_events <- adverse_events %>%
-    mutate(dmt_action_taken = ifelse(grepl("pregnancy", ae_describe_event, ignore.case=TRUE) & is.na(dmt_action_taken), "None", dmt_action_taken))
-
 # data processing for adverse events
 adverse_events <- adverse_events %>%
     # keep only rows of data where a clear action regarding
@@ -131,6 +128,7 @@ imputed_edss_pdds <- readRDS("../primary_analysis/imputed_edss_pdds_data.RDS") %
     rename(num_followup = n) %>%
     select(c(PatientName, num_followup))
 
+# data processing for adverse events
 adverse_events <- baseline_data %>%
     # merge the adverse events count to the baseline data
     left_join(adverse_events, by="PatientName") %>%
@@ -144,8 +142,6 @@ adverse_events <- baseline_data %>%
     left_join(imputed_edss_pdds, by="PatientName") %>%
     # replace all NAs with 0
     mutate(num_followup = ifelse(is.na(num_followup), 0, num_followup))
-
-adverse_events %>% slice_head(n=10) %>% print()
 
 # data processing for serious adverse events
 serious_adverse_events <- serious_adverse_events %>%
@@ -168,8 +164,6 @@ serious_adverse_events <- baseline_data %>%
     left_join(imputed_edss_pdds, by="PatientName") %>%
     # replace all NAs with 0
     mutate(num_followup = ifelse(is.na(num_followup), 0, num_followup))
-
-serious_adverse_events %>% slice_head(n=10) %>% print()
 
 # set the seed so that the experiments are reproducible
 set.seed(0)
