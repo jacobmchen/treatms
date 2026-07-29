@@ -1,6 +1,5 @@
 # Compute the censoring time for each individual, which will
 # be the maximum of the censoring times for EDSS, T25FW, 9HPT
-# dominant hand, and 9HPT non-dominant hand.
 
 # read global variables
 source("global_variables.R")
@@ -48,49 +47,29 @@ t25fw_censoring_time <- msfc_data %>%
     # rename the column
     rename(t25fw_censor=month)
 
-# censoring time for 9HPT dominant hand
-hpt_dominant_censoring_time <- msfc_data %>%
+# censoring time for 9HPT
+hpt_censoring_time <- msfc_data %>%
     mutate(month = as.integer(gsub("Month ", "", FormGroup))) %>%
-    select(PatientName, month, dominant_hand_average_seconds) %>%
+    select(PatientName, month, hand_average_seconds) %>%
     group_by(PatientName) %>%
-    filter(!is.na(dominant_hand_average_seconds)) %>%
+    filter(!is.na(hand_average_seconds)) %>%
     slice_max(month) %>%
-    select(-dominant_hand_average_seconds) %>%
+    select(-hand_average_seconds) %>%
     # rename the column
-    rename(hpt_dominant_censor=month)
-
-# censoring time for 9HPT non-dominant hand
-hpt_non_dominant_censoring_time <- msfc_data %>%
-    mutate(month = as.integer(gsub("Month ", "", FormGroup))) %>%
-    select(PatientName, month, non_dominant_hand_average_seconds) %>%
-    group_by(PatientName) %>%
-    filter(!is.na(non_dominant_hand_average_seconds)) %>%
-    slice_max(month) %>%
-    select(-non_dominant_hand_average_seconds) %>%
-    # rename the column
-    rename(hpt_non_dominant_censor=month)
+    rename(hpt_censor=month)
 
 # merge all of the computed censoring times together
 censoring_times <- full_join(patients, edss_censoring_time, by="PatientName")
 censoring_times <- full_join(censoring_times, t25fw_censoring_time, by="PatientName")
-censoring_times <- full_join(censoring_times, hpt_dominant_censoring_time, by="PatientName")
-censoring_times <- full_join(censoring_times, hpt_non_dominant_censoring_time, by="PatientName")
+censoring_times <- full_join(censoring_times, hpt_censoring_time, by="PatientName")
 
 print(colnames(censoring_times))
 
 censor <- censoring_times %>%
-    mutate(censor = pmax(edss_censor, t25fw_censor, hpt_dominant_censor,
-                        hpt_non_dominant_censor, na.rm=TRUE))
+    mutate(censor = pmax(edss_censor, t25fw_censor, hpt_censor,
+                         na.rm=TRUE))
 
 print(censor %>% filter(censor != t25fw_censor))
-
-# see which individuals have different censoring times
-# for 9hpt dominant and non-dominant hands
-diff_times <- censoring_times %>%
-    # replace all NAs with -1, the ~ notation creates a function
-    # ~replace_na(., -1) is equivalent to function(x) replace_na(x, -1)
-    mutate(across(everything(), ~replace_na(., -1))) %>%
-    filter(edss_censor != t25fw_censor)
 
 # save the censoring times as a file
 saveRDS(censor, file="censoring_times.RDS")

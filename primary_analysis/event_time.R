@@ -1,5 +1,4 @@
-# Compute the event time for EDSS, T25FW, 9HPT dominant,
-# and 9HPT non-dominant hand.
+# Compute the event time for EDSS, T25FW, 9HPT
 
 # package for real excel files
 library(readxl)
@@ -110,11 +109,10 @@ baseline_data <- readRDS("baseline_data_merge_states.RDS")
 # keep a copy of all of the patients
 patients <- edss_data %>% select(PatientName) %>% distinct(PatientName)
 
-# get the censoring times for EDSS, t25fw, nhpt_dominant, and nhpt_non_dominant
+# get the censoring times for EDSS, t25fw, nhpt
 edss_censoring_time <- censoring_times %>% select(PatientName, edss_censor)
 t25fw_censoring_time <- censoring_times %>% select(PatientName, t25fw_censor)
-hpt_dominant_censoring_time <- censoring_times %>% select(PatientName, hpt_dominant_censor)
-hpt_non_dominant_censoring_time <- censoring_times %>% select(PatientName, hpt_non_dominant_censor)
+hpt_censoring_time <- censoring_times %>% select(PatientName, hpt_censor)
 
 # read the imputed edss and pdds data from a saved file
 imputed_data <- readRDS("imputed_edss_pdds_data.RDS")
@@ -175,12 +173,12 @@ t25fw_event_time <- complete(imp, action=1) %>%
 
 print(t25fw_event_time)
 
-# compute the event time for NHPT dominant hand data
-nhpt_dominant_event_time <- msfc_data %>%
+# compute the event time for NHPT data
+nhpt_event_time <- msfc_data %>%
     # replace Month with empty string then cast the string as an integer
     mutate(month = as.integer(gsub("Month ", "", FormGroup))) %>%
     # keep only patient name, month, and edss score columns
-    select(PatientName, month, dominant_hand_average_seconds) %>%
+    select(PatientName, month, hand_average_seconds) %>%
     # remove problematic patient for whom we have no data
     filter(PatientName != "0256-013") %>%
     # group the data by the patient name
@@ -192,94 +190,49 @@ nhpt_dominant_event_time <- msfc_data %>%
     # # this sorts the patient names and months
     # arrange(PatientName, month) %>%
     # make a new column with the censoring times
-    left_join(hpt_dominant_censoring_time, by="PatientName") %>%
+    left_join(hpt_censoring_time, by="PatientName") %>%
     # remove all rows of data there are after the censoring times for each
     # individual
-    filter(month <= hpt_dominant_censor) %>%
+    filter(month <= hpt_censor) %>%
     # remove the censoring times for each individual
-    select(-hpt_dominant_censor) %>%
+    select(-hpt_censor) %>%
     # add the baseline covariate data for each individual to allow for
     # missing data imputation
     left_join(baseline_data, by="PatientName")
 
 # use MICE to impute missing values for msfc data in between visits
-imp <- mice(nhpt_dominant_event_time, m=1, maxit=20, seed=0)
+imp <- mice(nhpt_event_time, m=1, maxit=20, seed=0)
 
 # save as RDS file the nhpt data for use as a secondary outcome
-saveRDS(complete(imp, action=1), file="nhpt_dom_data.RDS")
+saveRDS(complete(imp, action=1), file="nhpt_data.RDS")
 
 # compute the event time after filling in missing values with MICE
-nhpt_dominant_event_time <- complete(imp, action=1) %>%
-    select(PatientName, month, dominant_hand_average_seconds) %>%
+nhpt_event_time <- complete(imp, action=1) %>%
+    select(PatientName, month, hand_average_seconds) %>%
     group_by(PatientName) %>%
     # the imputation method will be none because we already used MICE to impute
     # missing values
-    summarize(nhpt_dominant_event = compute_event_time(month, dominant_hand_average_seconds, value_type="MSFC", imputation_method="none"))
+    summarize(nhpt_event = compute_event_time(month, hand_average_seconds, value_type="MSFC", imputation_method="none"))
 
-print(nhpt_dominant_event_time)
-
-# compute the event time for NHPT non-dominant hand data
-nhpt_non_dominant_event_time <- msfc_data %>%
-    # replace Month with empty string then cast the string as an integer
-    mutate(month = as.integer(gsub("Month ", "", FormGroup))) %>%
-    # keep only patient name, month, and edss score columns
-    select(PatientName, month, non_dominant_hand_average_seconds) %>%
-    # remove problematic patient for whom we have no data
-    filter(PatientName != "0256-013") %>%
-    # group the data by the patient name
-    group_by(PatientName) %>%
-    # some patients may not have an entry for every 6-month interval;
-    # this makes sure that every month at 6-month intervals are in the 
-    # data; new inserted months have a missing value for the edss score
-    complete(month=full_seq(month, 6)) %>%
-    # # this sorts the patient names and months
-    # arrange(PatientName, month) %>%
-    # make a new column with the censoring times
-    left_join(hpt_non_dominant_censoring_time, by="PatientName") %>%
-    # remove all rows of data there are after the censoring times for each
-    # individual
-    filter(month <= hpt_non_dominant_censor) %>%
-    # remove the censoring times for each individual
-    select(-hpt_non_dominant_censor) %>%
-    # add the baseline covariate data for each individual to allow for
-    # missing data imputation
-    left_join(baseline_data, by="PatientName")
-
-# use MICE to impute missing values for msfc data in between visits
-imp <- mice(nhpt_non_dominant_event_time, m=1, maxit=20, seed=0)
-
-# save as RDS file the nhpt data for use as a secondary outcome
-saveRDS(complete(imp, action=1), file="nhpt_nondom_data.RDS")
-
-# compute the event time after filling in missing values with MICE
-nhpt_non_dominant_event_time <- complete(imp, action=1) %>%
-    select(PatientName, month, non_dominant_hand_average_seconds) %>%
-    group_by(PatientName) %>%
-    # the imputation method will be none because we already used MICE to impute
-    # missing values
-    summarize(nhpt_non_dominant_event = compute_event_time(month, non_dominant_hand_average_seconds, value_type="MSFC", imputation_method="none"))
-
-print(nhpt_non_dominant_event_time)
+print(nhpt_event_time)
 
 # merge all of the event times together
 event_times <- full_join(patients, edss_event_time, by="PatientName")
 event_times <- full_join(event_times, t25fw_event_time, by="PatientName")
-event_times <- full_join(event_times, nhpt_dominant_event_time, by="PatientName")
-event_times <- full_join(event_times, nhpt_non_dominant_event_time, by="PatientName")
+event_times <- full_join(event_times, nhpt_event_time, by="PatientName")
 
 print(head(event_times))
 
 #' Select the minimum event time out of the four computed event times.
 #' @param edss The computed event time for EDSS
 #' @param t25fw The computed event time for T25FW
-#' @param nhpt_dom The computed event time for NHPT on the dominant hand.
-#' @param nhpt_non_dom The computed event time for NHPT on the non-dominant hand.
+#' @param nhpt The computed event time for NHPT
 #' @return The minimum of the computed event times. If all four values are missing
 #' return missing value.
 #' @details Compute the minimum event time from the four computed metrics.
-select_event_time <- function(edss, t25fw, nhpt_dom, nhpt_non_dom) {
-    # combine the four values into a vector
-    vec <- c(edss, t25fw, nhpt_dom, nhpt_non_dom)
+select_event_time <- function(edss, t25fw, nhpt) {
+    # combine the three values into a vector
+    vec <- c(edss, t25fw, nhpt)
 
     # if all values are missing, return a missing value
     if (sum(is.na(vec)) == length(vec)) return(NA)
@@ -289,7 +242,7 @@ select_event_time <- function(edss, t25fw, nhpt_dom, nhpt_non_dom) {
 
 event_times <- event_times %>%
     group_by(PatientName) %>%
-    mutate(event_time = select_event_time(edss_event, t25fw_event, nhpt_dominant_event, nhpt_non_dominant_event))
+    mutate(event_time = select_event_time(edss_event, t25fw_event, nhpt_event))
 
 print(head(event_times))
 

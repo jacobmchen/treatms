@@ -20,40 +20,42 @@ library(tidyverse)
 tau <- 84
 
 # # read the data
-# data <- readRDS("full_data_all_clusters.RDS")
-#
-# # create long form data using the data with all clusters
-# dlong_all <- create_dlong(data)
-#
-# print("RMST estimate for all clusters")
-# print(tmle(dlong_all, tau))
-#
-# # read the data
-# data <- readRDS("full_data_no_clusters.RDS")
-#
-# # create long form data using the data with all clusters
-# dlong_no <- create_dlong(data)
-#
-# print("RMST estimate for no clusters")
-# print(tmle(dlong_no, tau))
-#
-# # read the data
-# data <- readRDS("full_data_merge_rare_clusters.RDS")
-#
-# # create long form data using the data with all clusters
-# dlong_rare <- create_dlong(data)
-#
-# print("RMST estimate for rare clusters")
-# print(tmle(dlong_rare, tau))
-#
-# # read the data
-# data <- readRDS("full_data_merge_states.RDS")
-#
-# # create long form data using the data with all clusters
-# dlong_states <- create_dlong(data)
-#
-# print("RMST estimate for state clusters")
-# print(tmle(dlong_states, tau))
+data <- readRDS("full_data_all_clusters.RDS")
+
+# create long form data using the data with all clusters
+dlong_all <- create_dlong(data)
+
+print("RMST estimate for all clusters")
+print(tmle(dlong_all, tau))
+
+# read the data
+data <- readRDS("full_data_no_clusters.RDS")
+
+# create long form data using the data with all clusters
+dlong_no <- create_dlong(data)
+
+print("RMST estimate for no clusters")
+print(tmle(dlong_no, tau))
+
+# read the data
+data <- readRDS("full_data_merge_rare_clusters.RDS")
+
+# create long form data using the data with all clusters
+dlong_rare <- create_dlong(data)
+
+print("RMST estimate for rare clusters")
+print(tmle(dlong_rare, tau))
+
+# read the data
+data <- readRDS("full_data_merge_states.RDS")
+
+# create long form data using the data with all clusters
+dlong_states <- create_dlong(data)
+
+print("RMST estimate for state clusters")
+print(tmle(dlong_states, tau))
+
+q()
 
 # see if the difference covers zero by computing Wald-type confidence intervals
 # where the point estimate is the difference in theta and the standard error is the

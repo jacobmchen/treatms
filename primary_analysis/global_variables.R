@@ -26,12 +26,12 @@ compute_average_msfc <- function(msfc_data) {
     # for the average of t25fw and nhpt for dom and non-dom hands
     msfc_data <- msfc_data %>%
         mutate(trial_average_seconds = (trial_one_seconds + trial_two_seconds)/2) %>%
-        mutate(dominant_hand_average_seconds = (dominant_hand_t1_seconds + dominant_hand_t2_seconds)/2) %>%
-        mutate(non_dominant_hand_average_seconds = (non_dom_hand_t1_seconds + non_dom_hand_t2_seconds)/2)
+        # take the average of the four trials across both hands as the metric
+        mutate(hand_average_seconds = (dominant_hand_t1_seconds + dominant_hand_t2_seconds + non_dom_hand_t1_seconds + non_dom_hand_t2_seconds)/4)
 
     # exception handling for patient with incorecctly entered 0 values
     msfc_data <- msfc_data %>%
-        mutate(dominant_hand_average_seconds = ifelse(PatientName == "0216-012" & FormGroup == "Month 42", NA, dominant_hand_average_seconds))
+        mutate(hand_average_seconds = ifelse(PatientName == "0216-012" & FormGroup == "Month 42", NA, hand_average_seconds))
 
     return(msfc_data)
 }
