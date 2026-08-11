@@ -211,4 +211,4 @@ type_I_error_sim <- function(num_simulations) {
     return(c(num_success / num_simulations, mean(point_estimates)))
 }
 
-type_I_error_sim(2)
+type_I_error_sim(200)
