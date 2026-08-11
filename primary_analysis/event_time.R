@@ -134,6 +134,8 @@ msfc_data <- compute_average_msfc(msfc_data)
 t25fw_event_time <- msfc_data %>%
     # replace Month with empty string then cast the string as an integer
     mutate(month = as.integer(gsub("Month ", "", FormGroup))) %>%
+    # after the above operation, get rid of all rows with a missing value
+    filter(!is.na(month)) %>%
     # keep only patient name, month, and t25fw score columns
     select(PatientName, month, trial_average_seconds) %>%
     # remove problematic patient for whom we have no data
@@ -177,6 +179,8 @@ print(t25fw_event_time)
 nhpt_event_time <- msfc_data %>%
     # replace Month with empty string then cast the string as an integer
     mutate(month = as.integer(gsub("Month ", "", FormGroup))) %>%
+    # after the above operation, get rid of all rows with a missing value
+    filter(!is.na(month)) %>%
     # keep only patient name, month, and edss score columns
     select(PatientName, month, hand_average_seconds) %>%
     # remove problematic patient for whom we have no data

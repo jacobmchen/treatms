@@ -55,6 +55,8 @@ pdds_data <- pdds_data %>%
 edss_pdds_data <- edss_data %>%
     # replace Month with empty string then cast the string as an integer
     mutate(month = as.integer(gsub("Month ", "", FormGroup))) %>%
+    # after the above operation, get rid of all rows with a missing value
+    filter(!is.na(month)) %>%
     # keep only patient name, month, and edss score columns (including
     # sub-functional system scores)
     select(PatientName, month, total_edss_score,
@@ -99,5 +101,4 @@ imp <- mice(edss_pdds_data, m=1, maxit=20, seed=0)
 # save the imputed data into a separate file
 imputed_data <- complete(imp, action=1)
 saveRDS(imputed_data, file="imputed_edss_pdds_data.RDS")
-
 

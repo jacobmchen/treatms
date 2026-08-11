@@ -9,7 +9,7 @@ library(glmmTMB)
 library(ordinal)
 
 # save file name for the longitudinal data
-data_file_name <- "../longitudinal_data_set_2026-06-05.xlsx"
+data_file_name <- "../longitudinal_data_set_2026-08-06.xlsx"
 
 # save file name for the nqol data
 nqol_file_name <- "../nqol_07-23-2026.xlsx"
@@ -22,6 +22,10 @@ no_data_patient <- "0225-016"
 # and returns a version with the average for the t25fw and
 # nhpt for dom and non-dom hands computed
 compute_average_msfc <- function(msfc_data) {
+    msfc_data <- msfc_data %>%
+        mutate(dominant_hand_t1_seconds = as.numeric(dominant_hand_t1_seconds)) %>%
+        mutate(dominant_hand_t2_seconds = as.numeric(dominant_hand_t1_seconds)) 
+
     # all we need to do in this function is to create three additional columns
     # for the average of t25fw and nhpt for dom and non-dom hands
     msfc_data <- msfc_data %>%

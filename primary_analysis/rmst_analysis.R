@@ -20,32 +20,32 @@ library(tidyverse)
 tau <- 84
 
 # # read the data
-data <- readRDS("full_data_all_clusters.RDS")
-
-# create long form data using the data with all clusters
-dlong_all <- create_dlong(data)
-
-print("RMST estimate for all clusters")
-print(tmle(dlong_all, tau))
-
-# read the data
-data <- readRDS("full_data_no_clusters.RDS")
-
-# create long form data using the data with all clusters
-dlong_no <- create_dlong(data)
-
-print("RMST estimate for no clusters")
-print(tmle(dlong_no, tau))
-
-# read the data
-data <- readRDS("full_data_merge_rare_clusters.RDS")
-
-# create long form data using the data with all clusters
-dlong_rare <- create_dlong(data)
-
-print("RMST estimate for rare clusters")
-print(tmle(dlong_rare, tau))
-
+# data <- readRDS("full_data_all_clusters.RDS")
+#
+# # create long form data using the data with all clusters
+# dlong_all <- create_dlong(data)
+#
+# print("RMST estimate for all clusters")
+# print(tmle(dlong_all, tau))
+#
+# # read the data
+# data <- readRDS("full_data_no_clusters.RDS")
+#
+# # create long form data using the data with all clusters
+# dlong_no <- create_dlong(data)
+#
+# print("RMST estimate for no clusters")
+# print(tmle(dlong_no, tau))
+#
+# # read the data
+# data <- readRDS("full_data_merge_rare_clusters.RDS")
+#
+# # create long form data using the data with all clusters
+# dlong_rare <- create_dlong(data)
+#
+# print("RMST estimate for rare clusters")
+# print(tmle(dlong_rare, tau))
+#
 # read the data
 data <- readRDS("full_data_merge_states.RDS")
 
@@ -55,7 +55,8 @@ dlong_states <- create_dlong(data)
 print("RMST estimate for state clusters")
 print(tmle(dlong_states, tau))
 
-q()
+# set the seed for experiments below
+set.seed(0)
 
 # see if the difference covers zero by computing Wald-type confidence intervals
 # where the point estimate is the difference in theta and the standard error is the
@@ -97,8 +98,6 @@ time_restriction_simulation <- function(dlong) {
 }
 
 # time_restriction_simulation(dlong_all)
-
-set.seed(0)
 
 # declare a function that, when run, runs a simulation study on
 # the power of the rmst analysis in detecting an effect size of 12 months /
@@ -163,4 +162,53 @@ power_simulation <- function(num_simulations) {
     return(c(num_success / num_simulations, mean(point_estimates)))
 }
 
-power_simulation(100)
+# power_simulation(100)
+
+# declare a function that, when run, runs a simulation study on
+# the power of the rmst analysis in finding false positives
+type_I_error_sim <- function(num_simulations) {
+    # read the data with states 
+    data <- readRDS("full_data_merge_states.RDS")
+
+    # declare a variable to record the number of "successful" confidence
+    # intervals that cover 0
+    num_success <- 0
+    # declare a vector for storing point estimates from the simulations
+    point_estimates <- c()
+
+    for (i in 1:num_simulations) {
+        # make a copy of the original dataset
+        cur_data <- data
+
+        # simulate treatment assignments again
+        treatment_assignment <- rbinom(nrow(cur_data), 1, 0.5)
+
+        # make the new simulated treatments the treatments
+        cur_data$treatment_group <- treatment_assignment
+
+        # create long form data using the data with all clusters
+        dlong_states <- create_dlong(cur_data)
+
+        # run the RMST analysis and get the outputs
+        output <- tmle(dlong_states, tau)
+
+        # compute the difference
+        difference <- output$theta[2] - output$theta[1]
+        # get the estimated standard error
+        sdn <- output$sdn
+        # compute the confidence interval
+        conf_int <- c(difference - 1.96*sdn, difference+1.96*sdn)
+        print(difference)
+        print(conf_int)
+
+        point_estimates <- c(point_estimates, difference)
+
+        if (conf_int[1] < 0 & conf_int[2] > 0) {
+            num_success <- num_success + 1
+        }
+    }
+
+    return(c(num_success / num_simulations, mean(point_estimates)))
+}
+
+type_I_error_sim(2)

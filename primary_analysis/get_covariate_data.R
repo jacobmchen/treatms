@@ -69,7 +69,8 @@ process_data <- function(data) {
     # patient 0412-021 is transgender, so their sex at birth is manually set to 1
     return_data$gender[return_data$PatientName == "0412-021"] <- 1
 
-    return_data <- merge(return_data, social_status, by="PatientName") %>%
+    # use left_join here because not all patients appear in the sheet social status
+    return_data <- left_join(return_data, social_status, by="PatientName") %>%
         mutate(sex = ifelse(is.na(sex_at_birth), gender, sex_at_birth)) %>%
         select(-c(gender, sex_at_birth))
 
@@ -128,6 +129,8 @@ baseline_data <- baseline_data %>%
 
 # clean the baseline data using all clusters
 baseline_data_all_clusters <- process_data(baseline_data)
+
+baseline_data_all_clusters %>% filter(PatientName == "0100-047") %>% slice_head(n=10) %>% print()
 
 # read the data for baseline covariates (variables that are indicative
 # of disease progression)
