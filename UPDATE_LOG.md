@@ -271,3 +271,11 @@ Sex at birth data cleaning continued.
 - The updated longitudinal data has missing sheets that are vital to analysis, so I changed the file read back to the previous version from June, 2026.
 - Could it be the case that data needs to be standardized before running likelihood ratio test? The NQoL data does not seem to be giving a high false positive rate compared to the MSIS-29 data.
 - It turns out that there may be a bug with my data processing for the MSIS-29 data. This may be leading to the high rate of false positives. Using this updated data processing, I will re-run the simulations to see if the false positivity rate issue is fixed.
+
+2026-08-27
+
+Summary of updates since most recent one:
+- Add analysis code for NQOL subscales.
+- Change all analyses involving the 9-hole peg test to use the average across all 4 hands rather than considering the two hands separately.
+- Run the type I error simulations for the primary analysis and verify that the type I error rate is 0.05.
+- Set up a folder for the covid substudy.

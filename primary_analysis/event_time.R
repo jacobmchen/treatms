@@ -159,11 +159,25 @@ t25fw_event_time <- msfc_data %>%
     # missing data imputation
     left_join(baseline_data, by="PatientName")
 
+# make a copy of the original dataset that just keeps track of which
+# values will be imputed
+t25fw_copy <- t25fw_event_time %>%
+    ungroup() %>%
+    select(c(PatientName, month, trial_average_seconds)) %>%
+    mutate(t25fw_missing=ifelse(is.na(trial_average_seconds), 1, 0)) %>%
+    select(-trial_average_seconds)
+
 # use MICE to impute missing values for msfc data in between visits
 imp <- mice(t25fw_event_time, m=1, maxit=20, seed=0)
 
 # save as RDS file the t25fw data for use as a secondary outcome
 saveRDS(complete(imp, action=1), file="t25fw_data.RDS")
+
+# join back whether values were imputed to the imputed dataset
+annotated_t25fw_data <- complete(imp, action=1) %>%
+    inner_join(t25fw_copy, by=c("PatientName", "month"))
+# save annotated data as RDS
+saveRDS(annotated_t25fw_data, file="annotated_t25fw_data.RDS")
 
 # compute the event time after filling in missing values with MICE
 t25fw_event_time <- complete(imp, action=1) %>%
@@ -204,11 +218,27 @@ nhpt_event_time <- msfc_data %>%
     # missing data imputation
     left_join(baseline_data, by="PatientName")
 
+nhpt_event_time %>% slice_head(n=10) %>% print()
+
+# make a copy of the original dataset that just keeps track of which
+# values will be imputed
+nhpt_copy <- nhpt_event_time %>%
+    ungroup() %>%
+    select(c(PatientName, month, hand_average_seconds)) %>%
+    mutate(nhpt_missing=ifelse(is.na(hand_average_seconds), 1, 0)) %>%
+    select(-hand_average_seconds)
+
 # use MICE to impute missing values for msfc data in between visits
 imp <- mice(nhpt_event_time, m=1, maxit=20, seed=0)
 
 # save as RDS file the nhpt data for use as a secondary outcome
 saveRDS(complete(imp, action=1), file="nhpt_data.RDS")
+
+# join back whether values were imputed to the imputed dataset
+annotated_nhpt_data <- complete(imp, action=1) %>%
+    inner_join(nhpt_copy, by=c("PatientName", "month"))
+# save annotated data as RDS
+saveRDS(annotated_nhpt_data, file="annotated_nhpt_data.RDS")
 
 # compute the event time after filling in missing values with MICE
 nhpt_event_time <- complete(imp, action=1) %>%

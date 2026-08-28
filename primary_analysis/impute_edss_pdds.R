@@ -65,6 +65,7 @@ edss_pdds_data <- edss_data %>%
     # this column is being read as a string for some reason, so cast it
     # as a numeric
     mutate(fsvs_on_total = as.numeric(fsvs_on_total)) %>%
+    mutate(bowel_bladder_sys_score_total = as.numeric(bowel_bladder_sys_score_total)) %>%
     # remove problematic patient for whom we have no data
     filter(PatientName != "0256-013") %>%
     # change every instance of Not Obtained to a missing value in the data
@@ -90,7 +91,24 @@ edss_pdds_data <- edss_data %>%
     # missing data imputation
     left_join(baseline_data, by="PatientName")
 
-print(head(edss_pdds_data))
+edss_pdds_data %>% print(width=Inf)
+
+# create a separate dataframe that remembers whether edss and pdds are missing
+# for the purpose of spaghetti plots
+data_copy <- edss_pdds_data
+
+# keep only the relevant rows and create columns that keep track of which
+# values will be imputed
+# we have to track these values in a separate dataset because we don't want
+# them to be used in the MICE imputation
+data_copy <- data_copy %>%
+    ungroup() %>%
+    select(c(PatientName, month, total_edss_score, pdds_total_score)) %>%
+    mutate(edss_missing=ifelse(is.na(total_edss_score), 1, 0)) %>%
+    mutate(pdds_missing=ifelse(is.na(pdds_total_score), 1, 0)) %>%
+    select(-c(total_edss_score, pdds_total_score))
+
+data_copy %>% print(width=Inf)
 
 # use MICE to impute missing values for EDSS in between visits
 # NOTE: the run time may take a while, but that is expected because we are
@@ -102,3 +120,7 @@ imp <- mice(edss_pdds_data, m=1, maxit=20, seed=0)
 imputed_data <- complete(imp, action=1)
 saveRDS(imputed_data, file="imputed_edss_pdds_data.RDS")
 
+# join back whether values were imputed to the imputed dataset
+imputed_data <- imputed_data %>%
+    inner_join(data_copy, by=c("PatientName", "month"))
+saveRDS(imputed_data, file="annotated_imputed_edss_pdds_data.RDS")
