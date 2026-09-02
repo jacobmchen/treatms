@@ -18,7 +18,9 @@ edss_pdds_data <- readRDS("../annotated_imputed_edss_pdds_data.RDS") %>%
     # change the binary notation to a string indicating whether the value
     # was imputed or observed
     mutate(edss_missing=ifelse(edss_missing == 1, "Imputed", "Observed")) %>%
-    mutate(pdds_missing=ifelse(pdds_missing == 1, "Imputed", "Observed")) 
+    mutate(pdds_missing=ifelse(pdds_missing == 1, "Imputed", "Observed")) %>%
+    filter(edss_missing == "Observed") %>%
+    filter(pdds_missing == "Observed") 
 
 # note that as of 8/31/2026 there are 888 unique patients in the
 # above data
@@ -29,7 +31,8 @@ nhpt_data <- readRDS("../annotated_nhpt_data.RDS") %>%
     select(c(PatientName, month, hand_average_seconds, nhpt_missing)) %>%
     # change binary indicator of imputed value to strings
     mutate(nhpt_missing=ifelse(nhpt_missing == 1, "Imputed", "Observed")) %>%
-    rename(nhpt=hand_average_seconds)
+    rename(nhpt=hand_average_seconds) %>%
+    filter(nhpt_missing == "Observed")
 
 # note that as of 8/31/2026 there are 886 unique patients in the
 # above data
@@ -40,7 +43,8 @@ t25fw_data <- readRDS("../annotated_t25fw_data.RDS") %>%
     select(c(PatientName, month, trial_average_seconds, t25fw_missing)) %>%
     # change binary indicator of imputed value to strings
     mutate(t25fw_missing=ifelse(t25fw_missing == 1, "Imputed", "Observed")) %>%
-    rename(t25fw=trial_average_seconds)
+    rename(t25fw=trial_average_seconds) %>%
+    filter(t25fw_missing == "Observed")
 
 # note that as of 8/31/2026 there are 885 unique patients in the
 # above data
@@ -71,7 +75,7 @@ create_plots <- function(data, filename_prefix, column_name, missing_indicator) 
             filter(PatientName %in% patient_ids[i:end_index])
 
         # set a string for the filename
-        filename <- paste0("plots/", filename_prefix, "_patients_", i, "-", end_index, ".pdf")
+        filename <- paste0("plots_no_imputed_values/", filename_prefix, "_patients_", i, "-", end_index, ".pdf")
 
         # create the plot where each patient has its own line for edss
         p <- ggplot(data_to_plot, aes(x = month, y = .data[[column_name]], group = PatientName, color = PatientName)) +
