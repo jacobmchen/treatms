@@ -16,14 +16,13 @@ source("global_variables.R")
 #' @param value_type A string specifying whether the value is an EDSS value
 #' or an MSFC value since event time is defined differently for these
 #' types of values.
-#' @param imputation_method
 #' @return A single number signifying the month of the event time. If the
 #' event did not occur, returns Inf. If it is not possible to compute the
 #' event time, returns NA. 
-#' @details Compute the event time for a single individual. It is not
+#' @details Compute the event time for a single individual given their observations. It is not
 #' possible to compute the event time if there is no baseline value
 #' or if there are less than 2 observed values after baseline.
-compute_event_time <- function(months, values, value_type="EDSS", imputation_method="interpolate") {
+compute_event_time <- function(months, values, value_type="EDSS") {
     # if there is only one value or 0 values in the vector, we cannot
     # compute the event time
     if (length(months) <= 1) {
@@ -44,14 +43,6 @@ compute_event_time <- function(months, values, value_type="EDSS", imputation_met
         # compute sustained disease progression
         # we are going to impute missing values, so checking the length is sufficient
         return(NA)
-    }
-
-    # second, impute missing values in the vector of values based on the specified
-    # imputation method
-    if (imputation_method == "interpolate") {
-        # linearly interpolate the missing values based on the surrounding
-        # observed values, ex. 1, NA, NA, 4 -> 1, 2, 3, 4
-        values <- approx(values, n=length(values))$y
     }
 
     # declare the threshold that needs to be reached for two consecutive
@@ -121,11 +112,53 @@ imputed_data <- readRDS("imputed_edss_pdds_data.RDS")
 edss_event_time <- imputed_data %>%
     select(PatientName, month, total_edss_score) %>%
     group_by(PatientName) %>%
-    # the imputation method will be none because we already used MICE to impute
-    # missing values
-    summarize(edss_event = compute_event_time(month, total_edss_score, imputation_method="none"))
+    # compute the event time
+    summarize(edss_event = compute_event_time(month, total_edss_score))
 
 print(edss_event_time)
+
+# read the imputed edss and pdds data with annotations on which
+# values were imputed by MICE
+annotated_edss_pdds <- readRDS("annotated_imputed_edss_pdds_data.RDS") %>%
+    # keep only rows of data where EDSS was observed
+    filter(edss_missing == 0)
+
+# compute the event time using only observed values
+edss_event_time_observed_vals <- annotated_edss_pdds %>%
+    select(PatientName, month, total_edss_score) %>%
+    group_by(PatientName) %>%
+    # compute the event time using only observed values
+    summarize(edss_event_observed = compute_event_time(month, total_edss_score))
+
+print(edss_event_time_observed_vals)
+
+# create a dataframe for comparing EDSS event time based on whether
+# we use imputed MICE values or not
+compare_event_times <- edss_event_time %>%
+    # first, combine the computed event times with and without imputation
+    inner_join(edss_event_time_observed_vals, by="PatientName") %>%
+    # check if both event times are NA
+    mutate(both_na = ifelse(is.na(edss_event) & is.na(edss_event_observed), 1, 0)) %>%
+    # check if both event times have the same value
+    mutate(same_val = ifelse(edss_event == edss_event_observed, 1, 0)) %>%
+    # if same_val returns NA as a result of one of the event times being NA,
+    # then change it to a value of 0, meaning event times do not have the same value
+    mutate(same_val = ifelse(is.na(same_val), 0, same_val)) %>%
+    # if at least one of both_na or same_val is 1, then event time with and
+    # without imputed values have the same value, otherwise they do not
+    mutate(diff_vals = ifelse(both_na == 1 | same_val == 1, 0, 1)) %>%
+    # rename the column edss_event
+    rename(edss_event_imputed = edss_event) %>%
+    # subset to just rows where computed event times are different
+    filter(diff_vals == 1) %>%
+    select(-c(both_na, same_val, diff_vals)) 
+
+print(compare_event_times)
+
+# write this data to a csv file
+write.csv(compare_event_times, "compare_event_times_edss.csv", row.names=FALSE)
+
+q()
 
 msfc_data <- data.frame(read_excel(data_file_name, sheet="msfc"))
 msfc_data <- compute_average_msfc(msfc_data)
@@ -185,7 +218,7 @@ t25fw_event_time <- complete(imp, action=1) %>%
     group_by(PatientName) %>%
     # the imputation method will be none because we already used MICE to impute
     # missing values
-    summarize(t25fw_event = compute_event_time(month, trial_average_seconds, value_type="MSFC", imputation_method="none"))
+    summarize(t25fw_event = compute_event_time(month, trial_average_seconds, value_type="MSFC"))
 
 print(t25fw_event_time)
 
@@ -246,7 +279,7 @@ nhpt_event_time <- complete(imp, action=1) %>%
     group_by(PatientName) %>%
     # the imputation method will be none because we already used MICE to impute
     # missing values
-    summarize(nhpt_event = compute_event_time(month, hand_average_seconds, value_type="MSFC", imputation_method="none"))
+    summarize(nhpt_event = compute_event_time(month, hand_average_seconds, value_type="MSFC"))
 
 print(nhpt_event_time)
 
