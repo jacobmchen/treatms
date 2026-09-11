@@ -3,37 +3,38 @@ source("global_variables.R")
 
 # read the data with breakthrough disease data
 data <- data.frame(read_excel(covar_breakthrough_med_postpone, sheet="Sheet1")) %>%
-    select(c(patient_id, contains("any_breakthrough_disease"), contains("visit_date_M"))) %>%
+    select(c(patient_id, contains("medication_change"), visit_date_Baseline, contains("visit_date_W"))) %>%
                  # pivot all columns except for patient_id
     pivot_longer(cols = -patient_id,
                  # when the column name is split into two parts, the first group of the original column
                  # name is the column name with the cell value; the second group of the original 
-                 # column name should be stored in a column called month
+                 # column name should be stored in a column called timepoint
                  names_to = c(".value", "timepoint"),
-                 # this pattern tells us how to split the column name
+                 # this pattern tells us how to split the original column name
                  # (.*) means any symbol any number of times as the first group
-                 # [0-9]+ means any digit at least one time as the second group
-                 names_pattern = "(.*)_(Interim|M[0-9]+)") %>%
-    # get only observed months
-    filter(!is.na(month)) %>%
+                 # (Baseline|Week\\d*) means the string "Baseline" or "Week" followed by any 
+                 # number of digits
+                 names_pattern = "(.*)_(Baseline|Week\\d*)") %>%
+    # get only observed timepoints
+    filter(!is.na(timepoint)) %>%
     # get only observed breakthrough disease yes/no
-    filter(!is.na(any_breakthrough_disease)) %>%
+    filter(!is.na(medication_change)) %>%
     # make sure visit date is within the substudy range
     filter(visit_date >= substudy_start & visit_date <= substudy_end) %>%
     # keep only rows where the string "Yes" is present
-    filter(str_detect(any_breakthrough_disease, "Yes"))
+    filter(str_detect(medication_change, "Yes"))
 
 data %>% slice_head(n=10) %>% print()
 
 # get the patients that experienced breakthrough disease in the substudy timeframe
-yes_breakthrough <- unique(data$patient_id)
+adherence_change <- unique(data$patient_id)
 
 # use the patient_id data to get data on whether each patient experienced
 # breakthrough disease
-breakthrough_data <- patient_id_data %>%
-    mutate(breakthrough_disease = ifelse(patient_id %in% yes_breakthrough, 1, 0))
+adherence_data <- patient_id_data %>%
+    mutate(adherence_change = ifelse(patient_id %in% adherence_change, 1, 0))
 
-print(breakthrough_data)
+print(adherence_data)
 
 # save the data to an RDS file
-saveRDS(breakthrough_data, "breakthrough_data.RDS")
+saveRDS(adherence_data, "adherence_data.RDS")

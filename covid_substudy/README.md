@@ -25,3 +25,7 @@ The files in this folder are as follows:
 - ``README.md`` (this file): documentation.
 - ``global_variables.R`` states file names and other global variables used throughout this folder.
 - ``process_breakthrough.R`` processes the data to get a dataframe with a binary indicator for whether each patient experienced breakthrough disease during the substudy period. The file then saves this dataframe as an RDS file for future processing.
+- ``process_adherence.R`` does the same as above but for DMT altered adherence instead.
+- ``process_postpone.R`` does the same as above but for whether a patient postponed or cancelled a visit.
+- ``process_newworse.R`` does the same as above but for whether a patient has new or worsening symptoms.
+- ``process_covariates.R`` processes covariate data.
