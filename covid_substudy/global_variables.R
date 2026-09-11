@@ -27,6 +27,12 @@ new_worse <- "covid_substudy_data/new_worse.xlsx"
 # social distancing
 other_covar <- "covid_substudy_data/other_covar.xlsx"
 
+# save file name for neuro-qol data
+nqol <- "covid_substudy_data/nqol.xlsx"
+
+# save file name for covid hospitalization data
+covid_hosp <- "covid_substudy_data/covid_hosp.xlsx"
+
 # create a dataframe with just the patient_ids
 patient_id_data <- data.frame(read_excel(covar_breakthrough_med_postpone, sheet="Sheet1")) %>%
     select(patient_id)
