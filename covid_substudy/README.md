@@ -13,13 +13,13 @@ First, we list out baseline covariates for the substudy that we will control for
 - degree of social distancing.
 
 The exact analyses we need to conduct are listed below:
-- Fit a logistic regression model for MS breakthrough disease as a function of DMT altered adherence and above covariates.
-- Fit a logistic regression model for new/worsened MS symptoms as a function of cancelled visits and above covariates.
-- Fit a logistic regression model for DMT altered adherence and as a function of Neuro-QoL Anxiety T-score and above covariates.
-- Fit a logistic regression model for DMT altered adherence and as a function of Neuro-QoL Depression T-score and above covariates.
-- Fit a logistic regression model for postponed/cancelled visits and as a function of Neuro-QoL Anxiety T-score and above covariates.
-- Fit a logistic regression model for postponed/cancelled visits and as a function of Neuro-QoL Depression T-score and above covariates.
-- Perform a Fisher's exact test on the relationship between treatment class and hospitalization due to COVID-19.
+1. Fit a logistic regression model for MS breakthrough disease as a function of DMT altered adherence and above covariates.
+2. Fit a logistic regression model for new/worsened MS symptoms as a function of cancelled visits and above covariates.
+3. Fit a logistic regression model for DMT altered adherence and as a function of Neuro-QoL Anxiety T-score and above covariates.
+4. Fit a logistic regression model for DMT altered adherence and as a function of Neuro-QoL Depression T-score and above covariates.
+5. Fit a logistic regression model for postponed/cancelled visits and as a function of Neuro-QoL Anxiety T-score and above covariates.
+6. Fit a logistic regression model for postponed/cancelled visits and as a function of Neuro-QoL Depression T-score and above covariates.
+7. Perform a Fisher's exact test on the relationship between treatment class and hospitalization due to COVID-19.
 
 The files in this folder are as follows:
 - ``README.md`` (this file): documentation.
@@ -29,3 +29,4 @@ The files in this folder are as follows:
 - ``process_postpone.R`` does the same as above but for whether a patient postponed or cancelled a visit.
 - ``process_newworse.R`` does the same as above but for whether a patient has new or worsening symptoms.
 - ``process_covariates.R`` processes covariate data.
+- ``aim1_regressions.R`` will fit the regressions related to Aim 1. These will be regressions 1-2 in the list above.
