@@ -279,3 +279,7 @@ Summary of updates since most recent one:
 - Change all analyses involving the 9-hole peg test to use the average across all 4 hands rather than considering the two hands separately.
 - Run the type I error simulations for the primary analysis and verify that the type I error rate is 0.05.
 - Set up a folder for the covid substudy.
+
+2026-09-21
+
+- Need to add code that runs a separate primary analysis where measurements for EDSS with an exception finding are excluded. MSFC data (for t25fw and nhpt) don't have an exception finding field.

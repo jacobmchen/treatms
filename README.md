@@ -7,11 +7,10 @@ The code for data pre-processing and implementation of the restricted mean survi
 - The file ``impute_edss_pdds.R`` uses MICE to impute EDDS and PDDS values for every time point in the study and saves the imputed data into an .RDS file for future use.
 - The file ``event_time.R`` computes the event time (sustained disability progression) for each individual, if they experienced the event. Missing values for MSFC are imputed using MICE under the MAR assumption. For EDSS, we use the imputed values from ``impute_edss_pdds.R``. To run this file, it needs the outputs from the three previous files (``compute_censoring_time.R``, ``get_covariate_data.R``, and ``impute_edss_pdds.R``). 
 - The file ``combine_data.R`` combines the data computed in the above three files into one centralized dataset. In this file, we also simulate random treatment assignments.
-- The file ``rmst_analysis.R`` executes the RMST analysis and outputs the RMST for each treatment group as well as the square root of the variance for the difference in means estimate. This file also contains simulations where we try different time windows and evaluate the variance.
+- The file ``rmst_analysis.R`` executes the RMST analysis and outputs the RMST for each treatment group as well as the square root of the variance for the difference in means estimate. This file also contains simulations where we try different time windows and evaluate the variance. If running the simulations are not desired, then simply exit the program early.
 - The file ``plot_simulation_results.R`` plots simulation results from the variance simulations in the ``rmst_analysis.R`` file.
 
-In the folder ``secondary_analyses``,
-- The file ``exam_based_relapse_recovery.R`` contains code for computing the secondary outcome exam based relapse recovery.
+In the folder ``secondary_analyses``, all of the files for the secondary analysis are included. Each file executes a separate analysis. This folder also includes code for simulating the likelihood ratio tests on a cluster using the SLURM workload manager.
 
 The folder ``pdds_explore`` contains some code plotting histograms for the PDDS score at various time intervals as well as the histograms themselves.
 

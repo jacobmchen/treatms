@@ -15,6 +15,14 @@ censoring_times <- censoring_times %>% select(PatientName, censor)
 event_times <- readRDS("event_times.RDS")
 event_times <- event_times %>% select(PatientName, event_time)
 
+# read the censoring times data with no exceptions
+censoring_times_no_exceptions <- readRDS("censoring_times_no_exceptions.RDS")
+censoring_times_no_exceptions <- censoring_times_no_exceptions %>% select(PatientName, censor)
+
+# read the event times data with no exceptions
+event_times_no_exceptions <- readRDS("event_times_no_exceptions.RDS")
+event_times_no_exceptions <- event_times_no_exceptions %>% select(PatientName, event_time)
+
 # define a function that combines the previously computed covariate data,
 # data on censoring times, and data on event times
 combine_data <- function(covariate_data, censoring_times, event_times, treatment_assignment) {
@@ -68,3 +76,9 @@ full_data <- combine_data(covariate_data, censoring_times, event_times, treatmen
 
 # save the full data as an RDS file
 saveRDS(full_data, "full_data_merge_states.RDS")
+
+# combine the data where states are merged using data with no exception findings
+full_data_no_exceptions <- combine_data(covariate_data, censoring_times_no_exceptions, event_times_no_exceptions, treatment_assignment)
+
+# save the full data as an RDS file
+saveRDS(full_data_no_exceptions, "full_data_merge_states_no_exceptions.RDS")

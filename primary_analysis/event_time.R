@@ -100,8 +100,8 @@ baseline_data <- readRDS("baseline_data_merge_states.RDS")
 # keep a copy of all of the patients
 patients <- edss_data %>% select(PatientName) %>% distinct(PatientName)
 
-# get the censoring times for EDSS, t25fw, nhpt
-edss_censoring_time <- censoring_times %>% select(PatientName, edss_censor)
+# get the censoring times for t25fw, nhpt
+# these censoring times are needed for imputation of MSFC values
 t25fw_censoring_time <- censoring_times %>% select(PatientName, t25fw_censor)
 hpt_censoring_time <- censoring_times %>% select(PatientName, hpt_censor)
 
@@ -116,6 +116,22 @@ edss_event_time <- imputed_data %>%
     summarize(edss_event = compute_event_time(month, total_edss_score))
 
 print(edss_event_time)
+
+# read the imputed edss and pdds data with no exceptions from a saved file
+imputed_data_no_exceptions <- readRDS("imputed_edss_pdds_data_no_exceptions.RDS")
+
+# compute the event time with no exceptions after filling in missing values with MICE
+edss_event_time_no_exceptions <- imputed_data_no_exceptions %>%
+    select(PatientName, month, total_edss_score) %>%
+    group_by(PatientName) %>%
+    # compute the event time
+    summarize(edss_event = compute_event_time(month, total_edss_score))
+
+print(edss_event_time_no_exceptions)
+
+##################
+# The following code block is for creating plots in an exploratory 
+# analysis only.
 
 # read the imputed edss and pdds data with annotations on which
 # values were imputed by MICE
@@ -158,7 +174,7 @@ print(compare_event_times)
 # write this data to a csv file
 write.csv(compare_event_times, "compare_event_times_edss.csv", row.names=FALSE)
 
-q()
+##########################
 
 msfc_data <- data.frame(read_excel(data_file_name, sheet="msfc"))
 msfc_data <- compute_average_msfc(msfc_data)
@@ -284,11 +300,20 @@ nhpt_event_time <- complete(imp, action=1) %>%
 print(nhpt_event_time)
 
 # merge all of the event times together
-event_times <- full_join(patients, edss_event_time, by="PatientName")
-event_times <- full_join(event_times, t25fw_event_time, by="PatientName")
-event_times <- full_join(event_times, nhpt_event_time, by="PatientName")
+event_times <- patients %>%
+    full_join(edss_event_time, by="PatientName") %>%
+    full_join(t25fw_event_time, by="PatientName") %>%
+    full_join(nhpt_event_time, by="PatientName")
 
 print(head(event_times))
+
+# merge all of the event times together with no exceptions
+event_times_no_exceptions <- patients %>%
+    full_join(edss_event_time_no_exceptions, by="PatientName") %>%
+    full_join(t25fw_event_time, by="PatientName") %>%
+    full_join(nhpt_event_time, by="PatientName")
+
+print(head(event_times_no_exceptions))
 
 #' Select the minimum event time out of the four computed event times.
 #' @param edss The computed event time for EDSS
@@ -307,6 +332,8 @@ select_event_time <- function(edss, t25fw, nhpt) {
     else return(min(vec, na.rm=TRUE))
 }
 
+# choose the event time corresponding to the event time that happened
+# first of edss, t25fw, or nhpt
 event_times <- event_times %>%
     group_by(PatientName) %>%
     mutate(event_time = select_event_time(edss_event, t25fw_event, nhpt_event))
@@ -315,3 +342,20 @@ print(head(event_times))
 
 # save the censoring times as a file
 saveRDS(event_times, file="event_times.RDS")
+
+# choose the event time corresponding to the event time that happened
+# first of edss, t25fw, or nhpt when ignoring exceptions
+event_times_no_exceptions <- event_times_no_exceptions %>%
+    group_by(PatientName) %>%
+    mutate(event_time = select_event_time(edss_event, t25fw_event, nhpt_event))
+
+print(head(event_times_no_exceptions))
+
+# save the censoring times as a file
+saveRDS(event_times_no_exceptions, file="event_times_no_exceptions.RDS")
+
+# check if there are differences if you use exceptions or not
+# there are 118 patients for whom event time is different when
+# you use don't use exception findings
+event_times %>% full_join(event_times_no_exceptions, by="PatientName") %>% 
+    select(c(PatientName, edss_event.x, edss_event.y)) %>% filter(edss_event.x != edss_event.y) %>% print()

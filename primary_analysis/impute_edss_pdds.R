@@ -51,45 +51,63 @@ pdds_data <- pdds_data %>%
     # occurrence
     distinct(PatientName, month, .keep_all=TRUE)
 
-# prepare edss data to get it ready for imputation
-edss_pdds_data <- edss_data %>%
-    # replace Month with empty string then cast the string as an integer
-    mutate(month = as.integer(gsub("Month ", "", FormGroup))) %>%
-    # after the above operation, get rid of all rows with a missing value
-    filter(!is.na(month)) %>%
-    # keep only patient name, month, and edss score columns (including
-    # sub-functional system scores)
-    select(PatientName, month, total_edss_score,
-           fs_cfss_total, fsvs_on_total, fs_bfss_total, total_pyramidal_score,
-           sensory_system_score_total, cerebellar_system_score_total, bowel_bladder_sys_score_total) %>%
-    # this column is being read as a string for some reason, so cast it
-    # as a numeric
-    mutate(fsvs_on_total = as.numeric(fsvs_on_total)) %>%
-    mutate(bowel_bladder_sys_score_total = as.numeric(bowel_bladder_sys_score_total)) %>%
-    # remove problematic patient for whom we have no data
-    filter(PatientName != "0256-013") %>%
-    # change every instance of Not Obtained to a missing value in the data
-    mutate(across(where(is.character), ~ na_if(.x, "Not Obtained"))) %>%
-    # group the data by the patient name
-    group_by(PatientName) %>%
-    # some patients may not have an entry for every 6-month interval;
-    # this makes sure that every month at 6-month intervals are in the 
-    # data; new inserted months have a missing value for the edss score
-    complete(month=full_seq(month, 6)) %>%
-    # this sorts the patient names and months
-    arrange(PatientName, month) %>%
-    # append pdds scores to the data
-    left_join(pdds_data, by=c("PatientName", "month")) %>%
-    # make a new column with the censoring times
-    left_join(edss_censoring_time, by="PatientName") %>%
-    # remove all rows of data there are after the censoring times for each
-    # individual
-    filter(month <= edss_censor) %>%
-    # remove the censoring times for each individual
-    select(-edss_censor) %>%
-    # add the baseline covariate data for each individual to allow for
-    # missing data imputation
-    left_join(baseline_data, by="PatientName")
+# create a function that gets edss data ready for imputation
+# and also merges it with pdds data; this function allows
+# us to specify whether to include observations with exception findings, and
+# it is set to TRUE by default
+prepare_edss_data <- function(edss_data, pdds_data, edss_censoring_time, include_exceptions=TRUE) {
+
+    # if we aren't including values with an exception finding,
+    # remove such rows from the edss_data
+    if (include_exceptions == FALSE) {
+        edss_data <- edss_data %>% filter(fs_finding == "No")
+    }
+
+    # prepare edss data to get it ready for imputation
+    edss_pdds_data <- edss_data %>%
+        # replace Month with empty string then cast the string as an integer
+        mutate(month = as.integer(gsub("Month ", "", FormGroup))) %>%
+        # after the above operation, get rid of all rows with a missing value
+        filter(!is.na(month)) %>%
+        # keep only patient name, month, and edss score columns (including
+        # sub-functional system scores)
+        select(PatientName, month, total_edss_score,
+               fs_cfss_total, fsvs_on_total, fs_bfss_total, total_pyramidal_score,
+               sensory_system_score_total, cerebellar_system_score_total, bowel_bladder_sys_score_total) %>%
+        # this column is being read as a string for some reason, so cast it
+        # as a numeric
+        mutate(fsvs_on_total = as.numeric(fsvs_on_total)) %>%
+        mutate(bowel_bladder_sys_score_total = as.numeric(bowel_bladder_sys_score_total)) %>%
+        # remove problematic patient for whom we have no data
+        filter(PatientName != "0256-013") %>%
+        # change every instance of Not Obtained to a missing value in the data
+        mutate(across(where(is.character), ~ na_if(.x, "Not Obtained"))) %>%
+        # group the data by the patient name
+        group_by(PatientName) %>%
+        # some patients may not have an entry for every 6-month interval;
+        # this makes sure that every month at 6-month intervals are in the 
+        # data, starting from month 0; new inserted months have a missing value for the edss score
+        complete(month=full_seq(c(0, month), 6)) %>%
+        # this sorts the patient names and months
+        arrange(PatientName, month) %>%
+        # append pdds scores to the data
+        left_join(pdds_data, by=c("PatientName", "month")) %>%
+        # make a new column with the censoring times
+        left_join(edss_censoring_time, by="PatientName") %>%
+        # remove all rows of data there are after the censoring times for each
+        # individual
+        filter(month <= edss_censor) %>%
+        # remove the censoring times for each individual
+        select(-edss_censor) %>%
+        # add the baseline covariate data for each individual to allow for
+        # missing data imputation
+        left_join(baseline_data, by="PatientName")
+
+    return(edss_pdds_data)
+}
+
+# get the edss and pdds data that is ready for imputation
+edss_pdds_data <- prepare_edss_data(edss_data, pdds_data, edss_censoring_time)
 
 edss_pdds_data %>% print(width=Inf)
 
@@ -120,7 +138,41 @@ imp <- mice(edss_pdds_data, m=1, maxit=20, seed=0)
 imputed_data <- complete(imp, action=1)
 saveRDS(imputed_data, file="imputed_edss_pdds_data.RDS")
 
+# create a copy of the imputed data for comparison purposes
+copy <- imputed_data
+
 # join back whether values were imputed to the imputed dataset
 imputed_data <- imputed_data %>%
     inner_join(data_copy, by=c("PatientName", "month"))
 saveRDS(imputed_data, file="annotated_imputed_edss_pdds_data.RDS")
+
+################################################
+# now repeat the same processes except for only values of EDSS that
+# are not exception findings
+
+# read the data for censoring times, which was computed separately 
+censoring_times <- readRDS("censoring_times_no_exceptions.RDS")
+
+# get the censoring times for EDSS
+edss_censoring_time <- censoring_times %>% select(PatientName, edss_censor)
+
+# get the edss and pdds data that is ready for imputation
+edss_pdds_data <- prepare_edss_data(edss_data, pdds_data, edss_censoring_time, include_exceptions=FALSE)
+
+# use MICE to impute missing values for EDSS in between visits
+# NOTE: the run time may take a while, but that is expected because we are
+# assuming MAR where all observed covariates are necessary to impute the 
+# missing data
+imp <- mice(edss_pdds_data, m=1, maxit=20, seed=0)
+
+# save the imputed data into a separate file
+imputed_data <- complete(imp, action=1)
+saveRDS(imputed_data, file="imputed_edss_pdds_data_no_exceptions.RDS")
+
+copy %>% slice_head(n=10) %>% print()
+imputed_data %>% slice_head(n=10) %>% print()
+
+# this print statement is for debugging and viewing
+# edss progression for a single patient
+imputed_data %>% full_join(copy, by=c("PatientName", "month")) %>%
+    filter(PatientName == "0100-014") %>% select(c(PatientName, month, total_edss_score.x, total_edss_score.y)) %>% print()

@@ -46,14 +46,27 @@ tau <- 84
 # print("RMST estimate for rare clusters")
 # print(tmle(dlong_rare, tau))
 #
+
 # read the data
 data <- readRDS("full_data_merge_states.RDS")
 
 # create long form data using the data with all clusters
 dlong_states <- create_dlong(data)
 
-print("RMST estimate for state clusters")
+print("RMST estimate for state clusters with exceptions")
 print(tmle(dlong_states, tau))
+
+# read the data with no exceptions
+data <- readRDS("full_data_merge_states_no_exceptions.RDS")
+
+# create long form data using the data with all clusters
+dlong_states <- create_dlong(data)
+
+print("RMST estimate for state clusters no exceptions")
+print(tmle(dlong_states, tau))
+
+# exit the program here if don't want to run experiments below
+q()
 
 # set the seed for experiments below
 set.seed(0)
