@@ -127,6 +127,23 @@ baseline_data <- data.frame(read_excel(data_file_name, sheet="baseline chars"))
 baseline_data <- baseline_data %>%
     filter(PatientName != no_data_patient)
 
+
+# set seed for generating treatment groups
+set.seed(0)
+
+# generate the treatment variable randomly
+# once masking is removed, replace this with the actual treatment data
+treatment_assignment <- rbinom(nrow(baseline_data), 1, 0.5)
+
+# get a dataframe with just the patient name and the randomly generated treatment
+# group
+treatment_data <- baseline_data %>% mutate(treatment_group = treatment_assignment) %>%
+    select(c(PatientName, treatment_group))
+
+# save the treatment assignments as an RDS file
+saveRDS(treatment_data, file="treatment_data.RDS")
+
+
 # clean the baseline data using all clusters
 baseline_data_all_clusters <- process_data(baseline_data)
 

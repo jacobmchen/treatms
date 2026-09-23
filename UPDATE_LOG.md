@@ -283,3 +283,8 @@ Summary of updates since most recent one:
 2026-09-21
 
 - Need to add code that runs a separate primary analysis where measurements for EDSS with an exception finding are excluded. MSFC data (for t25fw and nhpt) don't have an exception finding field.
+
+2026-09-22
+
+- Add an option when imputing EDSS, PDDS, and MSFC values to give best and worst case imputations for different treatment arms. The user will need to re-run the entire primary analysis for each imputation strategy. The default will be imputing by MICE.
+- In order to run the option of best/worst case imputation for different treatment arms, we will need to store a separate file for the treatment assignment.

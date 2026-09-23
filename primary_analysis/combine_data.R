@@ -47,8 +47,15 @@ combine_data <- function(covariate_data, censoring_times, event_times, treatment
 # read the baseline covariate data
 covariate_data <- readRDS("baseline_data.RDS")
 
-# create one treatment assignment to use for all datasets
-treatment_assignment <- rbinom(nrow(covariate_data), 1, 0.5)
+# read the data for treatment assignment
+treatment_data <- readRDS("treatment_data.RDS")
+
+# get the treatment assignment data
+treatment_assignment <- treatment_data$treatment_group
+
+if (nrow(covariate_data) != nrow(treatment_assignment)) {
+    stop("Number of patients and number of treatment assignments are unequal.")
+}
 
 # combine the data with all clusters
 full_data <- combine_data(covariate_data, censoring_times, event_times, treatment_assignment)
