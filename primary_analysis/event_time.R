@@ -23,6 +23,22 @@ source("global_variables.R")
 #' possible to compute the event time if there is no baseline value
 #' or if there are less than 2 observed values after baseline.
 compute_event_time <- function(months, values, value_type="EDSS") {
+    # create two new vectors that are copies of the original months
+    # and values except they only keep the months with observed values
+    observed_months <- c()
+    observed_values <- c()
+    # iterate through all the values
+    for (i in 1:length(values)) {
+        # save the value if it is observed, otherwise, skip it
+        if (!is.na(values[i])) {
+            observed_months <- c(observed_months, months[i])
+            observed_values <- c(observed_values, values[i])
+        }
+    }
+    # update the months and values to just observed values
+    months <- observed_months
+    values <- observed_values
+
     # if there is only one value or 0 values in the vector, we cannot
     # compute the event time
     if (length(months) <= 1) {
@@ -80,9 +96,9 @@ compute_event_time <- function(months, values, value_type="EDSS") {
 }
 
 # test the compute_event_time function
-# months <- c(0, 6, 24)
-# values <- c(1, 2, 1.5)
-#
+# months <- c(0, 6, 12, 24, 30, 36)
+# values <- c(1, 1, NA, 2, NA, 2)
+# #
 # print("original")
 # print(months)
 # print(values)
@@ -130,50 +146,50 @@ edss_event_time_no_exceptions <- imputed_data_no_exceptions %>%
 print(edss_event_time_no_exceptions)
 
 ##################
-# The following code block is for creating plots in an exploratory 
-# analysis only.
-
-# read the imputed edss and pdds data with annotations on which
-# values were imputed by MICE
-annotated_edss_pdds <- readRDS("annotated_imputed_edss_pdds_data.RDS") %>%
-    # keep only rows of data where EDSS was observed
-    filter(edss_missing == 0)
-
-# compute the event time using only observed values
-edss_event_time_observed_vals <- annotated_edss_pdds %>%
-    select(PatientName, month, total_edss_score) %>%
-    group_by(PatientName) %>%
-    # compute the event time using only observed values
-    summarize(edss_event_observed = compute_event_time(month, total_edss_score))
-
-print(edss_event_time_observed_vals)
-
-# create a dataframe for comparing EDSS event time based on whether
-# we use imputed MICE values or not
-compare_event_times <- edss_event_time %>%
-    # first, combine the computed event times with and without imputation
-    inner_join(edss_event_time_observed_vals, by="PatientName") %>%
-    # check if both event times are NA
-    mutate(both_na = ifelse(is.na(edss_event) & is.na(edss_event_observed), 1, 0)) %>%
-    # check if both event times have the same value
-    mutate(same_val = ifelse(edss_event == edss_event_observed, 1, 0)) %>%
-    # if same_val returns NA as a result of one of the event times being NA,
-    # then change it to a value of 0, meaning event times do not have the same value
-    mutate(same_val = ifelse(is.na(same_val), 0, same_val)) %>%
-    # if at least one of both_na or same_val is 1, then event time with and
-    # without imputed values have the same value, otherwise they do not
-    mutate(diff_vals = ifelse(both_na == 1 | same_val == 1, 0, 1)) %>%
-    # rename the column edss_event
-    rename(edss_event_imputed = edss_event) %>%
-    # subset to just rows where computed event times are different
-    filter(diff_vals == 1) %>%
-    select(-c(both_na, same_val, diff_vals)) 
-
-print(compare_event_times)
-
-# write this data to a csv file
-write.csv(compare_event_times, "compare_event_times_edss.csv", row.names=FALSE)
-
+# The following code block is for an exploratory 
+# analysis only. May be commented out, or left in without harm.
+#
+# # read the imputed edss and pdds data with annotations on which
+# # values were imputed by MICE
+# annotated_edss_pdds <- readRDS("annotated_imputed_edss_pdds_data.RDS") %>%
+#     # keep only rows of data where EDSS was observed
+#     filter(edss_missing == 0)
+#
+# # compute the event time using only observed values
+# edss_event_time_observed_vals <- annotated_edss_pdds %>%
+#     select(PatientName, month, total_edss_score) %>%
+#     group_by(PatientName) %>%
+#     # compute the event time using only observed values
+#     summarize(edss_event_observed = compute_event_time(month, total_edss_score))
+#
+# print(edss_event_time_observed_vals)
+#
+# # create a dataframe for comparing EDSS event time based on whether
+# # we use imputed MICE values or not
+# compare_event_times <- edss_event_time %>%
+#     # first, combine the computed event times with and without imputation
+#     inner_join(edss_event_time_observed_vals, by="PatientName") %>%
+#     # check if both event times are NA
+#     mutate(both_na = ifelse(is.na(edss_event) & is.na(edss_event_observed), 1, 0)) %>%
+#     # check if both event times have the same value
+#     mutate(same_val = ifelse(edss_event == edss_event_observed, 1, 0)) %>%
+#     # if same_val returns NA as a result of one of the event times being NA,
+#     # then change it to a value of 0, meaning event times do not have the same value
+#     mutate(same_val = ifelse(is.na(same_val), 0, same_val)) %>%
+#     # if at least one of both_na or same_val is 1, then event time with and
+#     # without imputed values have the same value, otherwise they do not
+#     mutate(diff_vals = ifelse(both_na == 1 | same_val == 1, 0, 1)) %>%
+#     # rename the column edss_event
+#     rename(edss_event_imputed = edss_event) %>%
+#     # subset to just rows where computed event times are different
+#     filter(diff_vals == 1) %>%
+#     select(-c(both_na, same_val, diff_vals)) 
+#
+# print(compare_event_times)
+#
+# # write this data to a csv file
+# write.csv(compare_event_times, "compare_event_times_edss.csv", row.names=FALSE)
+#
 ##########################
 
 msfc_data <- data.frame(read_excel(data_file_name, sheet="msfc"))
@@ -305,6 +321,7 @@ event_times <- patients %>%
     full_join(t25fw_event_time, by="PatientName") %>%
     full_join(nhpt_event_time, by="PatientName")
 
+print("event times")
 print(head(event_times))
 
 # merge all of the event times together with no exceptions
@@ -313,6 +330,7 @@ event_times_no_exceptions <- patients %>%
     full_join(t25fw_event_time, by="PatientName") %>%
     full_join(nhpt_event_time, by="PatientName")
 
+print("event times, no exceptions")
 print(head(event_times_no_exceptions))
 
 #' Select the minimum event time out of the four computed event times.
@@ -338,6 +356,7 @@ event_times <- event_times %>%
     group_by(PatientName) %>%
     mutate(event_time = select_event_time(edss_event, t25fw_event, nhpt_event))
 
+print("final event time")
 print(head(event_times))
 
 # save the censoring times as a file
@@ -349,6 +368,7 @@ event_times_no_exceptions <- event_times_no_exceptions %>%
     group_by(PatientName) %>%
     mutate(event_time = select_event_time(edss_event, t25fw_event, nhpt_event))
 
+print("final event time, no exceptions")
 print(head(event_times_no_exceptions))
 
 # save the censoring times as a file

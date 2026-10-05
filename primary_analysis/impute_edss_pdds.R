@@ -18,16 +18,16 @@ args <- commandArgs(trailingOnly = TRUE)
 if (length(args) < 1) {
     stop(paste(c("User did not supply argument for how to impute EDSS values.",
          "Usage is: Rscript impute_edss_pdds.R \"mice\"",
-         "Possible imputation options are \"mice\", \"A best, B worst\", \"A worst, B best\""), collapse="\n"))
+         "Possible imputation options are \"none\", \"mice\", \"A best, B worst\", \"A worst, B best\""), collapse="\n"))
 }
 
-imputation_options <- c("mice", "A best, B worst", "A worst, B best")
+imputation_options <- c("none", "mice", "A best, B worst", "A worst, B best")
 impute_method <- args[1]
 
 # make sure that the user entered a valid imputation option
 if (!(impute_method %in% imputation_options)) {
     stop(paste(c("User did not input a valid imputation option for EDSS.",
-                 "Possible imputation options are \"mice\", \"A best, B worst\", \"A worst, B best\""), collapse="\n"))
+                 "Possible imputation options are \"none\", \"mice\", \"A best, B worst\", \"A worst, B best\""), collapse="\n"))
 }
 
 # read the data for EDSS
@@ -154,6 +154,7 @@ edss_pdds_missing %>% print(width=Inf)
 # define a function that imputes missing values based on the user-specified
 # imputation method
 impute_missing_values <- function(edss_pdds_data, edss_pdds_missing, impute_method) {
+
     # save the min and max values for EDSS
     edss_min <- 0
     edss_max <- 9.5
@@ -169,6 +170,16 @@ impute_missing_values <- function(edss_pdds_data, edss_pdds_missing, impute_meth
 
     if (impute_method == "mice") {
         # return the mice imputed data directly
+        return(imputed_data)
+    } else if (impute_method == "none") {
+        # if we see this option, do not impute EDSS, but do impute PDDS
+        # thus, take the imputed dataset and reset the imputed values of
+        # EDSS as NA
+        imputed_data <- imputed_data %>%
+            inner_join(edss_pdds_missing, by=c("PatientName", "month")) %>%
+            mutate(total_edss_score = ifelse(edss_missing == 1, NA, total_edss_score)) %>%
+            select(-c(edss_missing, pdds_missing))
+
         return(imputed_data)
     } else if (impute_method == "A best, B worst") {
         # give the best possible value of EDSS for treatment A (0) and the
@@ -199,8 +210,9 @@ impute_missing_values <- function(edss_pdds_data, edss_pdds_missing, impute_meth
 
 # impute the missing values using the user-specified imputation method
 imputed_data <- impute_missing_values(edss_pdds_data, edss_pdds_missing, impute_method)
-# debug statement
-# imputed_data %>% inner_join(treatment_data, by="PatientName") %>% inner_join(edss_pdds_missing, by=c("PatientName", "month")) %>% slice_head(n=50) %>% select(PatientName, total_edss_score, treatment_group, edss_missing) %>% print()
+# debug statement below
+imputed_data %>% inner_join(treatment_data, by="PatientName") %>% inner_join(edss_pdds_missing, by=c("PatientName", "month")) %>% slice_head(n=50) %>% select(PatientName, total_edss_score, treatment_group, edss_missing) %>% print()
+
 # save the imputed dataset to an RDS file
 saveRDS(imputed_data, file="imputed_edss_pdds_data.RDS")
 
@@ -229,8 +241,8 @@ edss_pdds_data <- prepare_edss_data(edss_data, pdds_data, edss_censoring_time, i
 imputed_data <- impute_missing_values(edss_pdds_data, edss_pdds_missing, impute_method)
 saveRDS(imputed_data, file="imputed_edss_pdds_data_no_exceptions.RDS")
 
-copy %>% slice_head(n=10) %>% print()
-imputed_data %>% slice_head(n=10) %>% print()
+# copy %>% slice_head(n=10) %>% print()
+# imputed_data %>% slice_head(n=10) %>% print()
 
 # this print statement is for debugging and viewing
 # edss progression for a single patient
