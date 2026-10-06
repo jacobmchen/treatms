@@ -293,3 +293,8 @@ Summary of updates since most recent one:
 
 - We agreed that the primary analysis would not use MICE to impute EDSS. Instead we should consider disease progression as progression over two OBSERVED visits rather than two CONSECUTIVE visits. 
 - Since we don't know what to do for PDDS, continue imputing it by MICE for now. When we do not using any imputation method for EDSS, leave the values as NA. Then, update the code for determining disease progression to be able to handle missing values.
+
+2026-10-06
+
+- There was a bug with the coding of the variable race in the covid substudy data, so Carolyn updated it for me. Now need to rewrite the code for the analysis using the updated variable.
+- We also decided that we would impute missing values for the variable degree of social distancing using MICE.

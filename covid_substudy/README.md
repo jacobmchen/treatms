@@ -28,7 +28,7 @@ The files in this folder are as follows:
 - ``process_adherence.R`` does the same as above but for DMT altered adherence instead.
 - ``process_postpone.R`` does the same as above but for whether a patient postponed or cancelled a visit.
 - ``process_newworse.R`` does the same as above but for whether a patient has new or worsening symptoms.
-- ``process_covariates.R`` processes covariate data.
+- ``process_covariates.R`` processes covariate data. Missing values for social support survey total score and degree of social distancing are imputed via MICE.
 - ``aim1_regressions.R`` fits the regressions related to Aim 1. These will be regressions 1-2 in the list above.
 - ``aim2_regressions.R`` fits the regressions related to Aim 2. These will be regressions 3-6 in the list above.
 - ``fishers_test.R`` runs the Fisher's exact test corresponding to number 7 in the list above. 
