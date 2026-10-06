@@ -20,15 +20,17 @@ The exact analyses we need to conduct are listed below:
 5. Fit a logistic regression model for postponed/cancelled visits and as a function of Neuro-QoL Anxiety T-score and above covariates.
 6. Fit a logistic regression model for postponed/cancelled visits and as a function of Neuro-QoL Depression T-score and above covariates.
 7. Perform a Fisher's exact test on the relationship between treatment class and hospitalization due to COVID-19.
+8. Report the average number of postponed or cancelled in-person visits for each patient.
 
 The files in this folder are as follows:
 - ``README.md`` (this file): documentation.
 - ``global_variables.R`` states file names and other global variables used throughout this folder.
 - ``process_breakthrough.R`` processes the data to get a dataframe with a binary indicator for whether each patient experienced breakthrough disease during the substudy period. The file then saves this dataframe as an RDS file for future processing.
 - ``process_adherence.R`` does the same as above but for DMT altered adherence instead.
-- ``process_postpone.R`` does the same as above but for whether a patient postponed or cancelled a visit.
+- ``process_postpone.R`` does the same as above but for whether a patient postponed or cancelled a visit. It also saves an RDS file for the number of postponed or cancelled visits that each patient sustained.
 - ``process_newworse.R`` does the same as above but for whether a patient has new or worsening symptoms.
 - ``process_covariates.R`` processes covariate data. Missing values for social support survey total score and degree of social distancing are imputed via MICE.
 - ``aim1_regressions.R`` fits the regressions related to Aim 1. These will be regressions 1-2 in the list above.
 - ``aim2_regressions.R`` fits the regressions related to Aim 2. These will be regressions 3-6 in the list above.
 - ``fishers_test.R`` runs the Fisher's exact test corresponding to number 7 in the list above. 
+- ``average_postpone.R`` reports the average number of postponed or cancelled visits for each patient.

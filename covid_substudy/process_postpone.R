@@ -26,6 +26,15 @@ data <- data.frame(read_excel(covar_breakthrough_med_postpone, sheet="Sheet1")) 
 
 data %>% slice_head(n=10) %>% print()
 
+# count how many times each patient appears in the data
+postpone_count <- data %>% count(patient_id) %>%
+    rename(num_postpone=n)
+
+print(head(postpone_count))
+
+# save the number of times each patient postpones or cancels into an RDS file
+saveRDS(postpone_count, "postpone_count.RDS")
+
 # get the patients that experienced breakthrough disease in the substudy timeframe
 yes_postpone <- unique(data$patient_id)
 
@@ -34,7 +43,7 @@ yes_postpone <- unique(data$patient_id)
 postpone_data <- patient_id_data %>%
     mutate(yes_postpone = ifelse(patient_id %in% yes_postpone, 1, 0))
 
-print(postpone_data)
+print(head(postpone_data))
 
 # save the data to an RDS file
 saveRDS(postpone_data, "postpone_data.RDS")
