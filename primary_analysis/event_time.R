@@ -192,121 +192,22 @@ print(edss_event_time_no_exceptions)
 #
 ##########################
 
-msfc_data <- data.frame(read_excel(data_file_name, sheet="msfc"))
-msfc_data <- compute_average_msfc(msfc_data)
-
-# compute the event time for T25FW data
-t25fw_event_time <- msfc_data %>%
-    # replace Month with empty string then cast the string as an integer
-    mutate(month = as.integer(gsub("Month ", "", FormGroup))) %>%
-    # after the above operation, get rid of all rows with a missing value
-    filter(!is.na(month)) %>%
-    # keep only patient name, month, and t25fw score columns
-    select(PatientName, month, trial_average_seconds) %>%
-    # remove problematic patient for whom we have no data
-    filter(PatientName != "0256-013") %>%
-    # group the data by the patient name
-    group_by(PatientName) %>%
-    # some patients may not have an entry for every 6-month interval;
-    # this makes sure that every month at 6-month intervals are in the 
-    # data; new inserted months have a missing value for the edss score
-    complete(month=full_seq(month, 6)) %>%
-    # # this sorts the patient names and months
-    # arrange(PatientName, month) %>%
-    # make a new column with the censoring times
-    left_join(t25fw_censoring_time, by="PatientName") %>%
-    # remove all rows of data there are after the censoring times for each
-    # individual
-    filter(month <= t25fw_censor) %>%
-    # remove the censoring times for each individual
-    select(-t25fw_censor) %>%
-    # add the baseline covariate data for each individual to allow for
-    # missing data imputation
-    left_join(baseline_data, by="PatientName")
-
-# make a copy of the original dataset that just keeps track of which
-# values will be imputed
-t25fw_copy <- t25fw_event_time %>%
-    ungroup() %>%
-    select(c(PatientName, month, trial_average_seconds)) %>%
-    mutate(t25fw_missing=ifelse(is.na(trial_average_seconds), 1, 0)) %>%
-    select(-trial_average_seconds)
-
-# use MICE to impute missing values for msfc data in between visits
-imp <- mice(t25fw_event_time, m=1, maxit=20, seed=0)
-
-# save as RDS file the t25fw data for use as a secondary outcome
-saveRDS(complete(imp, action=1), file="t25fw_data.RDS")
-
-# join back whether values were imputed to the imputed dataset
-annotated_t25fw_data <- complete(imp, action=1) %>%
-    inner_join(t25fw_copy, by=c("PatientName", "month"))
-# save annotated data as RDS
-saveRDS(annotated_t25fw_data, file="annotated_t25fw_data.RDS")
+# read the imputed t25fw data
+t25fw_data <- readRDS("t25fw_data.RDS")
 
 # compute the event time after filling in missing values with MICE
-t25fw_event_time <- complete(imp, action=1) %>%
+t25fw_event_time <- t25fw_data %>%
     select(PatientName, month, trial_average_seconds) %>%
     group_by(PatientName) %>%
-    # the imputation method will be none because we already used MICE to impute
-    # missing values
     summarize(t25fw_event = compute_event_time(month, trial_average_seconds, value_type="MSFC"))
 
 print(t25fw_event_time)
 
-# compute the event time for NHPT data
-nhpt_event_time <- msfc_data %>%
-    # replace Month with empty string then cast the string as an integer
-    mutate(month = as.integer(gsub("Month ", "", FormGroup))) %>%
-    # after the above operation, get rid of all rows with a missing value
-    filter(!is.na(month)) %>%
-    # keep only patient name, month, and edss score columns
-    select(PatientName, month, hand_average_seconds) %>%
-    # remove problematic patient for whom we have no data
-    filter(PatientName != "0256-013") %>%
-    # group the data by the patient name
-    group_by(PatientName) %>%
-    # some patients may not have an entry for every 6-month interval;
-    # this makes sure that every month at 6-month intervals are in the 
-    # data; new inserted months have a missing value for the edss score
-    complete(month=full_seq(month, 6)) %>%
-    # # this sorts the patient names and months
-    # arrange(PatientName, month) %>%
-    # make a new column with the censoring times
-    left_join(hpt_censoring_time, by="PatientName") %>%
-    # remove all rows of data there are after the censoring times for each
-    # individual
-    filter(month <= hpt_censor) %>%
-    # remove the censoring times for each individual
-    select(-hpt_censor) %>%
-    # add the baseline covariate data for each individual to allow for
-    # missing data imputation
-    left_join(baseline_data, by="PatientName")
-
-nhpt_event_time %>% slice_head(n=10) %>% print()
-
-# make a copy of the original dataset that just keeps track of which
-# values will be imputed
-nhpt_copy <- nhpt_event_time %>%
-    ungroup() %>%
-    select(c(PatientName, month, hand_average_seconds)) %>%
-    mutate(nhpt_missing=ifelse(is.na(hand_average_seconds), 1, 0)) %>%
-    select(-hand_average_seconds)
-
-# use MICE to impute missing values for msfc data in between visits
-imp <- mice(nhpt_event_time, m=1, maxit=20, seed=0)
-
-# save as RDS file the nhpt data for use as a secondary outcome
-saveRDS(complete(imp, action=1), file="nhpt_data.RDS")
-
-# join back whether values were imputed to the imputed dataset
-annotated_nhpt_data <- complete(imp, action=1) %>%
-    inner_join(nhpt_copy, by=c("PatientName", "month"))
-# save annotated data as RDS
-saveRDS(annotated_nhpt_data, file="annotated_nhpt_data.RDS")
+# read the nhpt data
+nhpt_data <- readRDS("nhpt_data.RDS")
 
 # compute the event time after filling in missing values with MICE
-nhpt_event_time <- complete(imp, action=1) %>%
+nhpt_event_time <- nhpt_data %>%
     select(PatientName, month, hand_average_seconds) %>%
     group_by(PatientName) %>%
     # the imputation method will be none because we already used MICE to impute

@@ -296,5 +296,10 @@ Summary of updates since most recent one:
 
 2026-10-06
 
-- There was a bug with the coding of the variable race in the covid substudy data, so Carolyn updated it for me. Now need to rewrite the code for the analysis using the updated variable.
+- There was an inconsistency with the coding of the variable race in the covid substudy data, so Carolyn updated the data for me. Now need to rewrite the code for the analysis using the updated variable.
 - We also decided that we would impute missing values for the variable degree of social distancing using MICE.
+
+2026-10-07
+
+- Any repeated outcome measures should not be imputed by MICE. We should leave missing values as missing and just consider observed values of the outcomes. This will require updating the file ``impute_edss_pdds.R`` and ``event_time.R`` (this is where MSFC values are imputed).
+- Also refactored some of the code in ``event_time.R`` to a different file ``impute_msfc.R`` so that imputing MSFC values happens separately from computing event time.

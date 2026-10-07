@@ -153,55 +153,54 @@ edss_pdds_missing %>% print(width=Inf)
 
 # define a function that imputes missing values based on the user-specified
 # imputation method
-impute_missing_values <- function(edss_pdds_data, edss_pdds_missing, impute_method) {
+impute_missing_values <- function(edss_pdds_data, impute_method) {
 
     # save the min and max values for EDSS
     edss_min <- 0
     edss_max <- 9.5
 
-    # use MICE to impute missing values for EDSS in between visits
-    # NOTE: the run time may take a while, but that is expected because we are
-    # assuming MAR where all observed covariates are necessary to impute the 
-    # missing data
-    imp <- mice(edss_pdds_data, m=1, maxit=20, seed=0)
+    # save the min and max values for PDDS
+    pdds_min <- 0
+    pdds_max <- 8
 
-    # retrieve the imputed data
-    imputed_data <- complete(imp, action=1)
+   if (impute_method == "mice") {
+        # use MICE to impute missing values for EDSS and PDDS in between visits
+        # NOTE: the run time may take a while, but that is expected because we are
+        # assuming MAR where all observed covariates are necessary to impute the 
+        # missing data
+        imp <- mice(edss_pdds_data, m=1, maxit=20, seed=0)
 
-    if (impute_method == "mice") {
+        # retrieve the imputed data
+        imputed_data <- complete(imp, action=1)
+ 
         # return the mice imputed data directly
         return(imputed_data)
     } else if (impute_method == "none") {
-        # if we see this option, do not impute EDSS, but do impute PDDS
-        # thus, take the imputed dataset and reset the imputed values of
-        # EDSS as NA
-        imputed_data <- imputed_data %>%
-            inner_join(edss_pdds_missing, by=c("PatientName", "month")) %>%
-            mutate(total_edss_score = ifelse(edss_missing == 1, NA, total_edss_score)) %>%
-            select(-c(edss_missing, pdds_missing))
+        # if we see this option, do not impute EDSS nor PDDS
+        # in fact, just return the observed data
 
-        return(imputed_data)
+        return(edss_pdds_data)
     } else if (impute_method == "A best, B worst") {
         # give the best possible value of EDSS for treatment A (0) and the
         # worst possible value of EDSS for treatment B (1) for values of
-        # EDSS that were originally missing, which overwrites the values
-        # imputed by MICE
-        imputed_data <- imputed_data %>%
-            inner_join(edss_pdds_missing, by=c("PatientName", "month")) %>%
+        # EDSS that were originally missing
+        # the best possible value is the smaller value because bigger means
+        # worse for these two metrics
+        edss_pdds_data <- edss_pdds_data %>%
             inner_join(treatment_data, by="PatientName") %>%
-            mutate(total_edss_score = ifelse(edss_missing == 1, ifelse(treatment_group == 0, edss_min, edss_max), total_edss_score)) %>%
-            select(-c(edss_missing, pdds_missing, treatment_group))
+            mutate(total_edss_score = ifelse(is.na(total_edss_score), ifelse(treatment_group == 0, edss_min, edss_max), total_edss_score)) %>%
+            mutate(pdds_total_score = ifelse(is.na(pdds_total_score), ifelse(treatment_group == 0, pdds_min, pdds_max), pdds_total_score)) %>%
+            select(-treatment_group)
 
-        return(imputed_data)
+        return(edss_pdds_data)
     } else if (impute_method == "A worst, B best") {
-        # do the same as above, but switch treatments A and B
-        imputed_data <- imputed_data %>%
-            inner_join(edss_pdds_missing, by=c("PatientName", "month")) %>%
+        edss_pdds_data <- edss_pdds_data %>%
             inner_join(treatment_data, by="PatientName") %>%
-            mutate(total_edss_score = ifelse(edss_missing == 1, ifelse(treatment_group == 0, edss_max, edss_min), total_edss_score)) %>%
-            select(-c(edss_missing, pdds_missing, treatment_group))
+            mutate(total_edss_score = ifelse(is.na(total_edss_score), ifelse(treatment_group == 0, edss_max, edss_min), total_edss_score)) %>%
+            mutate(pdds_total_score = ifelse(is.na(pdds_total_score), ifelse(treatment_group == 0, pdds_max, pdds_min), pdds_total_score)) %>%
+            select(-treatment_group)
 
-        return(imputed_data)
+        return(edss_pdds_data)
     } else {
         # safety check for invalid imputation method
         stop("Invalid imputation method.")
@@ -209,7 +208,7 @@ impute_missing_values <- function(edss_pdds_data, edss_pdds_missing, impute_meth
 }
 
 # impute the missing values using the user-specified imputation method
-imputed_data <- impute_missing_values(edss_pdds_data, edss_pdds_missing, impute_method)
+imputed_data <- impute_missing_values(edss_pdds_data, impute_method)
 # debug statement below
 imputed_data %>% inner_join(treatment_data, by="PatientName") %>% inner_join(edss_pdds_missing, by=c("PatientName", "month")) %>% slice_head(n=50) %>% select(PatientName, total_edss_score, treatment_group, edss_missing) %>% print()
 
@@ -238,7 +237,7 @@ edss_censoring_time <- censoring_times %>% select(PatientName, edss_censor)
 edss_pdds_data <- prepare_edss_data(edss_data, pdds_data, edss_censoring_time, include_exceptions=FALSE)
 
 # impute the missing values using the user-specified imputation method
-imputed_data <- impute_missing_values(edss_pdds_data, edss_pdds_missing, impute_method)
+imputed_data <- impute_missing_values(edss_pdds_data, impute_method)
 saveRDS(imputed_data, file="imputed_edss_pdds_data_no_exceptions.RDS")
 
 # copy %>% slice_head(n=10) %>% print()
