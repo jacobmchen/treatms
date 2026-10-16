@@ -44,20 +44,20 @@ compute_event_time <- function(months, values, value_type="EDSS") {
     if (length(months) <= 1) {
         return(NA)
     }
+
     # if every observed value is missing, then we cannot compute the 
     # event time
-    if (sum(is.na(values)) == length(values)) {
+    if (sum(is.na(values)) > 0) {
+        # we encounter missing values in the vector of values, which should
+        # not have any missing values because we removed all missing values
+        stop("Fatal error: For some patient, missing values were not removed.")
         return(NA)
     }
 
     # second, check if it is possible to compute an event time
-    if (is.na(values[1])) {
-        # if there is no baseline value, we cannot compute sustained disease progression
-        return(NA)
-    } else if (length(values) < 3) {
+    if (length(values) < 3) {
         # if there is only one observed value after the baseline, then we cannot
         # compute sustained disease progression
-        # we are going to impute missing values, so checking the length is sufficient
         return(NA)
     }
 
@@ -69,7 +69,8 @@ compute_event_time <- function(months, values, value_type="EDSS") {
         # are always in increments of 0.5
         values <- round(values / 0.5) * 0.5
 
-        # determine the threshold value
+        # determine the threshold value, treating the first observed value
+        # as the baseline value
         if (values[1] <= 5.5) {
             threshold <- values[1] + 1
         } else {

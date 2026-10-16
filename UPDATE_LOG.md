@@ -303,3 +303,7 @@ Summary of updates since most recent one:
 
 - Any repeated outcome measures should not be imputed by MICE. We should leave missing values as missing and just consider observed values of the outcomes. This will require updating the file ``impute_edss_pdds.R`` and ``event_time.R`` (this is where MSFC values are imputed).
 - Also refactored some of the code in ``event_time.R`` to a different file ``impute_msfc.R`` so that imputing MSFC values happens separately from computing event time.
+
+2026-10-16
+
+- Slightly updated code for determining event time to reflect that we are treating the first observed value of a patient as their baseline value instead of treating as missing patients who did not have a measured baseline value.
