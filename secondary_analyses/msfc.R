@@ -11,26 +11,26 @@ library(readxl)
 t25fw <- readRDS("../primary_analysis/t25fw_data.RDS")
 
 # read the imputed nhpt data
-nhpt_nondom <- readRDS("../primary_analysis/nhpt_nondom_data.RDS") %>%
-    select(c(PatientName, month, non_dominant_hand_average_seconds))
-nhpt_dom <- readRDS("../primary_analysis/nhpt_dom_data.RDS") %>%
-    select(c(PatientName, month, dominant_hand_average_seconds))
+nhpt <- readRDS("../primary_analysis/nhpt_data.RDS") %>%
+    select(c(PatientName, month, hand_average_seconds))
 
 # read the observed pasat data, which is observed only every year
-pasat <- readRDS("observed_pasat.RDS") %>%
+# this RDS file is created in pasat.R
+pasat <- readRDS("pasat_data.RDS") %>%
     select(c(PatientName, month, pasat))
 
 data <- t25fw %>%
     # join the three metrics needed to compute msfc
-    # we do an inner join here so that rows where PASAT is
-    # not observed will be ignored
-    inner_join(nhpt_nondom, by=c("PatientName", "month")) %>%
-    inner_join(nhpt_dom, by=c("PatientName", "month")) %>%
-    inner_join(pasat, by=c("PatientName", "month")) %>%
+    full_join(nhpt, by=c("PatientName", "month")) %>%
+    full_join(pasat, by=c("PatientName", "month")) %>%
     # compute the average of the inverse of nhpt
-    mutate(nhpt_inverse = (1/dominant_hand_average_seconds + 1/non_dominant_hand_average_seconds)/2) %>%
+    mutate(nhpt_inverse = 1/hand_average_seconds) %>%
     # get rid of rows we don't need
-    select(-c(dominant_hand_average_seconds, non_dominant_hand_average_seconds))
+    select(-c(hand_average_seconds)) %>%
+    # keep only rows where all three values are observed
+    filter(!is.na(trial_average_seconds) & !is.na(nhpt_inverse) & !is.na(pasat))
+
+data %>% slice_head(n=10) %>% select(c(PatientName, month, trial_average_seconds, nhpt_inverse, pasat)) %>% print()
 
 # compute means and stds for nhpt, t25fw, and pasat
 nhpt_inverse_mean <- mean(data$nhpt_inverse)
@@ -48,14 +48,30 @@ data <- data %>%
 # set the seed so that the experiments are reproducible
 set.seed(0)
 
-# add a randomly generated treatment to the data for simulation
+# append the previously generated treatments to the data
+treatment_data <- readRDS("../primary_analysis/treatment_data.RDS")
+
 data <- data %>%
+    # group by patient name so that each patient gets the same
+    # treatment
     group_by(PatientName) %>%
-    mutate(treatment = rbinom(1, size=1, prob=0.5)) %>%
+    # get the treatment data
+    # note that we have to do an inner join here since not every
+    # patient had enough data to compute MSFC values for
+    inner_join(treatment_data, by="PatientName") %>%
+    # rename the column for treatment group
+    rename(treatment=treatment_group) %>%
+    # ungroup the analysis by patients
     ungroup()
 
+# print the columns for debugging
 print(colnames(data))
+# print the number of rows of data
+print(nrow(data))
+# check whether there are duplicate rows
+if (check_duplicate_rows(data)) stop("Fatal error: there are duplicate rows")
 
+# create formulas
 formulas <- create_formulas("treatment", "month", "PatientName", "msfc", data)
 formula_red <- as.formula(formulas[1])
 formula_full <- as.formula(formulas[2])

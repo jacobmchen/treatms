@@ -20,9 +20,10 @@ data <- data.frame(read_excel(data_file_name, sheet="msfc")) %>%
     # keep only relevant columns
     select(c(PatientName, month, pasat_forma, pasat_formb, pasat_statusa, pasat_statusb, trial_one_seconds,
              pasat_trial1, SiteName)) %>%
+    # cast this column as integers
     mutate(pasat_trial1 = as.integer(pasat_trial1)) %>%
     # remove the sites Geisinger, UMass Worcester, USouth Alabama, and
-    # MCR/Tidewater
+    # MCR/Tidewater based off of domain knowledge
     filter(SiteName != "Geisinger-0106") %>%
     filter(SiteName != "UMass Worcester-0420") %>%
     filter(SiteName != "USouth Alabama-0449") %>%
@@ -60,13 +61,12 @@ data <- data.frame(read_excel(data_file_name, sheet="msfc")) %>%
     inner_join(covariate_data, by="PatientName") %>%
     ungroup()
 
-# use MICE to impute the missing values for SDMT
-imp <- mice(data, m=1, maxit=20, seed=0)
-data <- complete(imp, action=1)
+print(head(data))
+print("number of missing values for PASAT")
+print(sum(is.na(data$pasat)))
 
-# save as RDS the final pasat data
-# this dataset will be used in the analysis of the outcome msfc
-saveRDS(data, file="observed_pasat.RDS")
+# save as RDS the pasat data with the missing values
+saveRDS(data, file="pasat_data.RDS")
 
 # look at the site data and see which sites are recording
 # PASAT at lower rates
@@ -104,13 +104,27 @@ site_pasat_data <- data.frame(read_excel(data_file_name, sheet="msfc")) %>%
 # set the seed so that the experiments are reproducible
 set.seed(0)
 
-# add a randomly generated treatment to the data for simulation
+# append the previously generated treatments to the data
+treatment_data <- readRDS("../primary_analysis/treatment_data.RDS")
+
 data <- data %>%
+    # group by patient name so that each patient gets the same
+    # treatment
     group_by(PatientName) %>%
-    mutate(treatment = rbinom(1, size=1, prob=0.5)) %>%
-    ungroup()
+    # get the treatment data
+    inner_join(treatment_data, by="PatientName") %>%
+    # rename the column for treatment group
+    rename(treatment=treatment_group) %>%
+    # ungroup the analysis by patients
+    ungroup() %>%
+    # delete rows with a missing value for PDDS
+    filter(!is.na(pasat))
 
 print(colnames(data))
+print("number of rows in data")
+print(nrow(data))
+# check whether there are duplicate rows
+if (check_duplicate_rows(data)) stop("Fatal error: there are duplicate rows")
 
 formulas <- create_formulas("treatment", "month", "PatientName", "pasat", data)
 formula_red <- as.formula(formulas[1])

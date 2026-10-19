@@ -10,14 +10,10 @@ source("../estimator_functions.R")
 # package for real excel files
 library(readxl)
 
-# library for imputing missing values
-library(mice)
-
 # read the data for baseline characteristics, which was computed separately
 baseline_data <- readRDS("../primary_analysis/baseline_data_merge_states.RDS")
 
-# look at the site data and see which sites are recording
-# PASAT at lower rates
+# get the censoring time for SDMT
 censor <- data.frame(read_excel(data_file_name, sheet="sdmt")) %>%
     # take the FormGroup string and change it to a number
     mutate(month = as.integer(gsub("Month ", "", FormGroup))) %>%
@@ -34,28 +30,21 @@ censor <- data.frame(read_excel(data_file_name, sheet="sdmt")) %>%
     # rename the month as the censoring time
     rename(censor=month)
  
-# compute the event time for sdmt
+# process the data to eventually compute the event time for sdmt
 event_time <- data.frame(read_excel(data_file_name, sheet="sdmt")) %>%
     # take the FormGroup string and change it to a number
     mutate(month = as.integer(gsub("Month ", "", FormGroup))) %>%
-    # keep only relevant rows
+    # keep only relevant columns
     select(c(PatientName, month, sdmt_score)) %>%
     group_by(PatientName) %>%
-    # fill in gaps if there are any for the 6-month intervals
-    complete(month=full_seq(month, 6)) %>%
     # sort the patient names by month
     arrange(PatientName, month) %>%
     # merge the censoring time
-    left_join(censor, by="PatientName") %>%
+    full_join(censor, by="PatientName") %>%
     # keep only the observations that are before the censoring time
     filter(month <= censor) %>%
     # delete the censor column
-    select(-censor) %>%
-    inner_join(baseline_data, by="PatientName")
-
-# use MICE to impute the missing values for SDMT
-imp <- mice(event_time, m=1, maxit=20, seed=0)
-event_time <- complete(imp, action=1)
+    select(-censor)
 
 # define a function that computes the event time for SDMT
 compute_event_time <- function(months, values) {
@@ -64,11 +53,12 @@ compute_event_time <- function(months, values) {
         return(NA)
     }
 
-    # get the baseline value
+    # get the baseline value, which is defined as just the first
+    # observed value
     baseline <- values[1]
 
     # see when the event happens, with the event being a 
-    # 4 point or more increase in value
+    # 4 point or more increase in value from baseline
     for (i in 2:length(months)) {
         if (values[i] <= baseline-4) {
             return(months[i])
@@ -85,6 +75,11 @@ event_time <- event_time %>%
     group_by(PatientName) %>%
     summarise(event=compute_event_time(month, sdmt_score))
 
+event_time %>% slice_head(n=10) %>% print()
+
+# append the previously generated treatments to the data
+treatment_data <- readRDS("../primary_analysis/treatment_data.RDS")
+
 # create the combined data
 combined_data <- baseline_data %>%
     # join the censor time
@@ -93,10 +88,20 @@ combined_data <- baseline_data %>%
     inner_join(event_time, by="PatientName") %>%
     # create randomized treatment
     group_by(PatientName) %>%
-    mutate(treatment=rbinom(1, size=1, prob=0.5)) %>%
+    # join the treatment data
+    inner_join(treatment_data, by="PatientName") %>%
+    # rename the column for treatment group
+    rename(treatment=treatment_group) %>%
     ungroup() %>%
     # get rid of rows for whom the event is a missing value
     filter(!is.na(event))
+
+combined_data %>% slice_head(n=10) %>% print()
+
+# print the columns for debugging
+print(colnames(combined_data))
+# print the number of rows of data
+print(nrow(combined_data))
 
 # redefine the id to just be 1 through number of rows
 combined_data <- combined_data %>%

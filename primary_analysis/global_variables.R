@@ -98,7 +98,7 @@ compute_month_interval <- function(data, columns_to_keep="") {
 
     # if no specific columns to keep, then keep only the PatientName,
     # visit_date, and closest_month
-    if (columns_to_keep == "") {
+    if (length(columns_to_keep) == 0) {
         data <- data %>%
             # keep only the columns of patient name, visit date, and the
             # closest month
@@ -149,7 +149,8 @@ run_chi_square_test <- function(data, formula_red, formula_full, outcome_type="c
     model_full <- fit_glmmTMB(formula_full, data, outcome_type)
 
     # if outcome type is categorical, compute the likelihood
-    # ratio test manually to avoid mysterious error
+    # ratio test manually to avoid error when using anova
+    # function using a model fitted using clmm
     if (outcome_type == "categorical") {
         LL_red  <- logLik(model_red)
         LL_full <- logLik(model_full)
@@ -362,4 +363,19 @@ create_dlong <- function(data) {
                     gA1 = bound01(predict(fitA, newdata = mutate(dlong, A = 1), type = 'response')))
 
     return(dlong)
+}
+
+# define a function that checks whether there are duplicate rows with
+# respect to PatientName and month
+# returns TRUE if there are duplicate rows, otherwise returns FALSE
+check_duplicate_rows <- function(data) {
+    # check the number of duplicate rows based on the columns PatientName
+    # and month
+    num_dup <- sum(duplicated(data %>% select(c(PatientName, month))))
+
+    if (num_dup == 0) {
+        return(FALSE)
+    } else {
+        return(TRUE)
+    }
 }

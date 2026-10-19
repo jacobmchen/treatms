@@ -24,26 +24,35 @@ data <- data.frame(read_excel(data_file_name, sheet="lcva")) %>%
     filter(!is.na(lcva)) %>%
     # group by patient name
     group_by(PatientName) %>%
-    # fill in the observation gaps for each patient
-    complete(month=full_seq(month, 6)) %>%
     # merge in the covariate data
     inner_join(covariate_data, by="PatientName")
 
-# use MICE to impute missing values for lcva in between visits
-imp <- mice(data, m=1, maxit=20, seed=0)
-
-data <- complete(imp, action=1)
+print(head(data))
 
 # set the seed so that the experiments are reproducible
 set.seed(0)
 
-# add a randomly generated treatment to the data for simulation
+# append the previously generated treatments to the data
+treatment_data <- readRDS("../primary_analysis/treatment_data.RDS")
+
 data <- data %>%
+    # group by patient name so that each patient gets the same
+    # treatment
     group_by(PatientName) %>%
-    mutate(treatment = rbinom(1, size=1, prob=0.5)) %>%
+    # get the treatment data
+    inner_join(treatment_data, by="PatientName") %>%
+    # rename the column for treatment group
+    rename(treatment=treatment_group) %>%
+    # ungroup the analysis by patients
     ungroup()
 
+# print the columns for debugging
 print(colnames(data))
+# print the number of rows of data
+print(nrow(data))
+# check whether there are duplicate rows
+if (check_duplicate_rows(data)) stop("Fatal error: there are duplicate rows")
+print(sum(is.na(data$lcva)))
 
 formulas <- create_formulas("treatment", "month", "PatientName", "lcva", data)
 formula_red <- as.formula(formulas[1])

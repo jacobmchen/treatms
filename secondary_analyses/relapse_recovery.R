@@ -42,6 +42,7 @@ fill_in_formgroup <- function(relapse_data) {
         # make subsequent changes occur row-wise across the whole dataframe
         rowwise() %>%
         # create a new column called closest date as follows
+        # here, we use an in-line function that returns the final object in the code block
         mutate(closest_date = {
                 # get the value of the visit_date
                 v <- visit_date
@@ -124,8 +125,12 @@ relapse_data <- relapse_data_orig %>%
 # window corresponding to when they had their relapse
 relapse_data <- fill_in_formgroup(relapse_data)
 
+print(head(relapse_data))
+
 # read the imputed EDSS and PDDS data
 imputed_data <- readRDS("../primary_analysis/imputed_edss_pdds_data.RDS")
+
+print(head(imputed_data))
 
 # filter the EDSS and PDDS data to only patients that experience relapse only once
 # and have at least one symptom recorded
@@ -162,11 +167,9 @@ determine_relapse_recovery <- function(patient, month, symptoms) {
     # worsened during relapse
     patient_data <- patient_data %>%
         select(c(PatientName, FormGroup), all_of(symptoms)) %>%
-        # keep only rows that are between 6 months before and after relapse
-        filter(FormGroup >= month-6) %>%
-        filter(FormGroup <= month+6)
-    
-    # if there are less than 3 observed values of EDSS, then it
+        ungroup()
+
+    # if there are less than 3 observed values of the relevant symptoms, then it
     # is not possible to compute relapse recovery
     if (nrow(patient_data) < 3) {
         return(NA)
@@ -178,15 +181,61 @@ determine_relapse_recovery <- function(patient, month, symptoms) {
     # iterate through each symptom associated with the exam-confirmed
     # relapse
     for (symptom in symptoms) {
-        pre_relapse <- patient_data[[symptom]][1]
-        relapse <- patient_data[[symptom]][2]
-        post_6 <- patient_data[[symptom]][3]
+        # get the data column pertaining to only this column
+        patient_data_symptom <- patient_data %>% select(c(FormGroup, all_of(symptom)))
 
-        if (post_6 <= pre_relapse) {
+        # get the most recently observed pre-relapse data
+        pre_relapse <- patient_data_symptom %>%
+            # keep only observed values at least 6 months before the relapse
+            filter(!is.na(.data[[symptom]]), FormGroup <= month-6) %>%
+            # keep only the row with the greatest month value
+            slice_max(FormGroup, n=1)
+
+        if (nrow(pre_relapse) < 1) {
+            # there is no recorded pre-relapse value for this symptom,
+            # so we cannot compute relapse recovery
+            return(NA)
+        }
+
+        # save the computed pre-relapse value
+        pre_relapse_val <- pre_relapse[[symptom]][1]
+
+        # get the relapse value, if it exists
+        relapse <- patient_data_symptom %>%
+            filter(!is.na(.data[[symptom]]), FormGroup == month)
+
+        if (nrow(pre_relapse) < 1) {
+            # there is no recorded relapse value for this symptom,
+            # so we cannot compute relapse recovery
+            return(NA)
+        }
+
+        # save the computed relapse value
+        relapse_val <- relapse[[symptom]][1]
+
+        # get the most recently observed post-relapse data
+        post_relapse <- patient_data_symptom %>%
+            # keep only observed values at least 6 months after the relapse
+            filter(!is.na(.data[[symptom]]), FormGroup >= month+6) %>%
+            # keep only the row with the smallest month value
+            slice_min(FormGroup, n=1)
+
+        if (nrow(post_relapse) < 1) {
+            # there is no recorded post-relapse value for this symptom,
+            # so we cannot compute relapse recovery
+            return(NA)
+        }
+
+        # save the computed post-relapse value
+        post_relapse_val <- post_relapse[[symptom]][1]
+
+        # see if this symptom experienced recovery
+        if (post_relapse_val <= pre_relapse_val) {
             complete_count <- complete_count + 1
         }
     }
 
+    # if all symptoms recovered, then the patient recovered
     if (complete_count == length(symptoms)) {
         return(1)
     } else {

@@ -307,3 +307,8 @@ Summary of updates since most recent one:
 2026-10-16
 
 - Slightly updated code for determining event time to reflect that we are treating the first observed value of a patient as their baseline value instead of treating as missing patients who did not have a measured baseline value.
+- Updated the code for PDDS to use initially generated treatments. Note that the run-time for PDDS can be up to an hour.
+
+2026-10-19
+
+- For analysis of secondary outcome MSFC, we have to do an inner join when merging treatment data because not every patient had enough data for us to compute an MSFC value.

@@ -24,23 +24,36 @@ data <- data %>%
 # set the seed so that the experiments are reproducible
 set.seed(0)
 
-# add a randomly generated treatment to the data for simulation
+# append the previously generated treatments to the data
+treatment_data <- readRDS("../primary_analysis/treatment_data.RDS")
+
 data <- data %>%
+    # group by patient name so that each patient gets the same
+    # treatment
     group_by(PatientName) %>%
-    mutate(treatment = rbinom(1, size=1, prob=0.5)) %>%
-    ungroup()
+    # get the treatment data
+    inner_join(treatment_data, by="PatientName") %>%
+    # rename the column for treatment group
+    rename(treatment=treatment_group) %>%
+    # ungroup the analysis by patients
+    ungroup() %>%
+    # delete rows with a missing value for PDDS
+    filter(!is.na(pdds_total_score))
 
+# print the columns for debugging
 print(colnames(data))
-
-# temporarily truncate data
-# data <- data %>% slice_head(n=50)
+# print the number of rows of data
+print(nrow(data))
+# check whether there are duplicate rows
+if (check_duplicate_rows(data)) stop("Fatal error: there are duplicate rows")
 
 formulas <- create_formulas("treatment", "month", "PatientName", "pdds_total_score", data)
 formula_red <- as.formula(formulas[1])
 formula_full <- as.formula(formulas[2])
 
 # run a single chi-square test
+# for PDDS, the run time of the chi-square test can take up to an hour
 print(run_chi_square_test(data, formula_red, formula_full, "categorical"))
 
 # run a bootstrap likelihood ratio test
-print(run_bootstrap_test(data, 2, formula_red, formula_full, "pdds_total_score", "categorical"))
+# print(run_bootstrap_test(data, 2, formula_red, formula_full, "pdds_total_score", "categorical"))
