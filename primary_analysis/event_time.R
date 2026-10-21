@@ -248,7 +248,7 @@ select_event_time <- function(edss, t25fw, nhpt) {
 
     # if all values are missing, return a missing value
     if (sum(is.na(vec)) == length(vec)) return(NA)
-    # otherwise, return the minimum value
+    # otherwise, return the minimum value based on the observed values
     else return(min(vec, na.rm=TRUE))
 }
 
@@ -260,6 +260,18 @@ event_times <- event_times %>%
 
 print("final event time")
 print(head(event_times))
+
+# get the list patients for whom we could not calculate an event time
+no_event_time <- event_times %>% 
+    filter(is.na(event_time))
+
+# add the list of patients we drop to the consort
+add_to_consort(no_event_time$PatientName, 
+                "less than 3 observations for all of EDSS, T25FW, and NHPT", "event_time.R")
+
+# actually drop the patients who have no censoring time
+event_times <- event_times %>%
+    filter(!is.na(event_time))
 
 # save the censoring times as a file
 saveRDS(event_times, file="event_times.RDS")
@@ -273,11 +285,24 @@ event_times_no_exceptions <- event_times_no_exceptions %>%
 print("final event time, no exceptions")
 print(head(event_times_no_exceptions))
 
+# get the list patients for whom we could not calculate an event time
+no_event_time <- event_times_no_exceptions %>% 
+    filter(is.na(event_time))
+
+# add the list of patients we drop to the consort
+add_to_consort(no_event_time$PatientName, 
+                "less than 3 observations for all of EDSS, T25FW, and NHPT", "event_time.R",
+                no_exceptions=TRUE)
+
+# actually drop the patients who have no censoring time
+event_times_no_exceptions <- event_times_no_exceptions %>%
+    filter(!is.na(event_time))
+
 # save the censoring times as a file
 saveRDS(event_times_no_exceptions, file="event_times_no_exceptions.RDS")
 
 # check if there are differences if you use exceptions or not
 # there are 118 patients for whom event time is different when
-# you use don't use exception findings
+# you don't use exception findings
 event_times %>% full_join(event_times_no_exceptions, by="PatientName") %>% 
     select(c(PatientName, edss_event.x, edss_event.y)) %>% filter(edss_event.x != edss_event.y) %>% print()

@@ -25,15 +25,13 @@ event_times_no_exceptions <- event_times_no_exceptions %>% select(PatientName, e
 
 # define a function that combines the previously computed covariate data,
 # data on censoring times, and data on event times
-combine_data <- function(covariate_data, censoring_times, event_times, treatment_assignment) {
-    # combine the data
-    full_data <- left_join(covariate_data, censoring_times, by="PatientName")
-    full_data <- left_join(full_data, event_times, by="PatientName")
-
-    # add a column of 0s and 1s generated randomly to represent treatment
-    # group
-    full_data <- full_data %>%
-        mutate(treatment_group = treatment_assignment)
+combine_data <- function(covariate_data, censoring_times, event_times, treatment_data) {
+    # combine the data, use inner join to ensure that
+    # only patients who have data are included 
+    full_data <- covariate_data %>% 
+        inner_join(censoring_times, by="PatientName") %>%
+        inner_join(event_times, by="PatientName") %>%
+        inner_join(treatment_data, by="PatientName")
 
     # rename the column PatientName as id and change it to be a vector of
     # 1:n to conform with the estimating functions later on
@@ -50,42 +48,39 @@ covariate_data <- readRDS("baseline_data.RDS")
 # read the data for treatment assignment
 treatment_data <- readRDS("treatment_data.RDS")
 
-# get the treatment assignment data
-treatment_assignment <- treatment_data$treatment_group
-
-if (nrow(covariate_data) != nrow(treatment_assignment)) {
+if (nrow(covariate_data) != nrow(treatment_data)) {
     stop("Number of patients and number of treatment assignments are unequal.")
 }
 
 # combine the data with all clusters
-full_data <- combine_data(covariate_data, censoring_times, event_times, treatment_assignment)
+full_data <- combine_data(covariate_data, censoring_times, event_times, treatment_data)
 
 # save the full data as an RDS file
 saveRDS(full_data, "full_data_all_clusters.RDS")
 
 # combine the data with no clusters
 covariate_data <- readRDS("baseline_data_no_clusters.RDS")
-full_data <- combine_data(covariate_data, censoring_times, event_times, treatment_assignment)
+full_data <- combine_data(covariate_data, censoring_times, event_times, treatment_data)
 
 # save the full data as an RDS file
 saveRDS(full_data, "full_data_no_clusters.RDS")
 
 # combine the data where rare clusters are merged
 covariate_data <- readRDS("baseline_data_merge_rare_clusters.RDS")
-full_data <- combine_data(covariate_data, censoring_times, event_times, treatment_assignment)
+full_data <- combine_data(covariate_data, censoring_times, event_times, treatment_data)
 
 # save the full data as an RDS file
 saveRDS(full_data, "full_data_merge_rare_clusters.RDS")
 
 # combine the data where states are merged
 covariate_data <- readRDS("baseline_data_merge_states.RDS")
-full_data <- combine_data(covariate_data, censoring_times, event_times, treatment_assignment)
+full_data <- combine_data(covariate_data, censoring_times, event_times, treatment_data)
 
 # save the full data as an RDS file
 saveRDS(full_data, "full_data_merge_states.RDS")
 
 # combine the data where states are merged using data with no exception findings
-full_data_no_exceptions <- combine_data(covariate_data, censoring_times_no_exceptions, event_times_no_exceptions, treatment_assignment)
+full_data_no_exceptions <- combine_data(covariate_data, censoring_times_no_exceptions, event_times_no_exceptions, treatment_data)
 
 # save the full data as an RDS file
 saveRDS(full_data_no_exceptions, "full_data_merge_states_no_exceptions.RDS")
