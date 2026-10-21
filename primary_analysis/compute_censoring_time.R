@@ -61,13 +61,14 @@ hpt_censoring_time <- msfc_data %>%
     rename(hpt_censor=month)
 
 # merge all of the computed censoring times together;
-# use an inner join to make sure that all patients are kept
+# use a left join to make sure that all patients are kept
 # even if their censoring time could not be calculated for
-# one of the outcomes
+# one of the outcomes; and we only keep patients that have
+# recorded values in the baseline chars sheet
 censoring_times <- patients %>%
-    full_join(edss_censoring_time, by="PatientName") %>%
-    full_join(t25fw_censoring_time, by="PatientName") %>%
-    full_join(hpt_censoring_time, by="PatientName")
+    left_join(edss_censoring_time, by="PatientName") %>%
+    left_join(t25fw_censoring_time, by="PatientName") %>%
+    left_join(hpt_censoring_time, by="PatientName")
 
 # the censoring time is the max of each of the censoring times
 censor <- censoring_times %>%
@@ -75,6 +76,18 @@ censor <- censoring_times %>%
                          na.rm=TRUE))
 
 censor %>% slice_head(n=10) %>% print()
+
+# get the list of patients that have no censoring time
+no_censoring_time <- censor %>%
+    filter(is.na(censor))
+
+# add the list of patients we drop to the consort
+add_to_consort(no_censoring_time$PatientName, 
+                "no measurements for edss, t25fw, or nhpt", "compute_censoring_time.R")
+
+# actually drop the patients who have no censoring time
+censor <- censor %>%
+    filter(!is.na(censor))
 
 # save the censoring times as a file
 saveRDS(censor, file="censoring_times.RDS")
@@ -107,9 +120,9 @@ edss_censoring_time <- edss_data %>%
 # even if their censoring time could not be calculated for
 # one of the outcomes
 censoring_times <- patients %>%
-    full_join(edss_censoring_time, by="PatientName") %>%
-    full_join(t25fw_censoring_time, by="PatientName") %>%
-    full_join(hpt_censoring_time, by="PatientName")
+    left_join(edss_censoring_time, by="PatientName") %>%
+    left_join(t25fw_censoring_time, by="PatientName") %>%
+    left_join(hpt_censoring_time, by="PatientName")
 
 # the censoring time is the max of each of the censoring times
 censor <- censoring_times %>%
@@ -117,6 +130,19 @@ censor <- censoring_times %>%
                          na.rm=TRUE))
 
 censor %>% slice_head(n=10) %>% print()
+
+# get the list of patients that have no censoring time
+no_censoring_time <- censor %>%
+    filter(is.na(censor))
+
+# add the list of patients we drop to the consort
+add_to_consort(no_censoring_time$PatientName, 
+                "no measurements for edss, t25fw, or nhpt", "compute_censoring_time.R",
+                no_exceptions=TRUE)
+
+# actually drop the patients who have no censoring time
+censor <- censor %>%
+    filter(!is.na(censor))
 
 # save the censoring times as a file
 saveRDS(censor, file="censoring_times_no_exceptions.RDS")

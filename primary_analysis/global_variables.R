@@ -379,3 +379,38 @@ check_duplicate_rows <- function(data) {
         return(TRUE)
     }
 }
+
+# define a function that takes as input a consort file, a list of patients,
+# a reason for dropping the patients, and the filename, and returns
+# a consort file with the list of patients added without any duplicates
+add_to_consort <- function(patients, reason, filename, no_exceptions=FALSE) {
+    if (no_exceptions) {
+        # read the consort file
+        consort <- readRDS("consort_no_exceptions.RDS")
+    } else {
+        # read the consort file
+        consort <- readRDS("consort.RDS")
+    }
+
+    # iterate through the patients we will drop
+    for (patient in patients) {
+        # add each patient to the consort and record why they were dropped
+        # and in which file;
+        # but only add a patient to the consort if they have not already appeared
+        if (!(patient %in% consort$patient_dropped)) {
+            consort <- consort %>%
+                add_row(patient_dropped=patient, 
+                        reason=reason, file_name=filename)
+        }
+    }
+
+    if (no_exceptions) {
+        # save the updated consort file
+        saveRDS(consort, "consort_no_exceptions.RDS")
+    } else {
+        # save the updated consort file
+        saveRDS(consort, "consort.RDS")
+    }
+
+    # don't return anything
+}

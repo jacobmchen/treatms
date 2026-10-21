@@ -48,7 +48,8 @@ treatment_data <- readRDS("treatment_data.RDS")
 # get the censoring times for EDSS
 edss_censoring_time <- censoring_times %>% select(PatientName, edss_censor)
 
-# prepare pdds data to get it ready for imputation
+# prepare pdds data to get it ready for imputation; this isn't closed
+# in a function since we only need to do it once for the PDDS data
 pdds_data <- pdds_data %>%
     # get rid of rows that do not have clearly labeled form groups for month number
     filter(!(FormGroup %in% c("Interim Information", "Interim ePro", "Supplemental", "End of Trial"))) %>%
@@ -60,7 +61,7 @@ pdds_data <- pdds_data %>%
     filter(FormGroup %% 6 == 0) %>%
     # rename FormGroup to month
     rename(month = FormGroup) %>%
-    # remove problematic patient
+    # remove a patient that does not have an entry in baseline chars
     filter(PatientName != "0256-013") %>%
     # group the data by patient name
     group_by(PatientName) %>%
@@ -100,8 +101,9 @@ prepare_edss_data <- function(edss_data, pdds_data, edss_censoring_time, include
         # this column is being read as a string for some reason, so cast it
         # as a numeric
         mutate(fsvs_on_total = as.numeric(fsvs_on_total)) %>%
+        # also cast this column as a numeric
         mutate(bowel_bladder_sys_score_total = as.numeric(bowel_bladder_sys_score_total)) %>%
-        # remove problematic patient for whom we have no data
+        # remove patient that does not show up in baseline chars
         filter(PatientName != "0256-013") %>%
         # change every instance of Not Obtained to a missing value in the data
         mutate(across(where(is.character), ~ na_if(.x, "Not Obtained"))) %>%
@@ -115,7 +117,8 @@ prepare_edss_data <- function(edss_data, pdds_data, edss_censoring_time, include
         arrange(PatientName, month) %>%
         # append pdds scores to the data
         left_join(pdds_data, by=c("PatientName", "month")) %>%
-        # make a new column with the censoring times
+        # make a new column with the censoring times; we only need to know the censoring
+        # times of patients that had at least one observed value, so 
         left_join(edss_censoring_time, by="PatientName") %>%
         # remove all rows of data there are after the censoring times for each
         # individual
@@ -132,7 +135,23 @@ prepare_edss_data <- function(edss_data, pdds_data, edss_censoring_time, include
 # get the edss and pdds data that is ready for imputation
 edss_pdds_data <- prepare_edss_data(edss_data, pdds_data, edss_censoring_time)
 
-edss_pdds_data %>% print(width=Inf)
+# debug statements here, ignore output
+######
+# get a copy of all of the patients from the baseline chars sheet
+# patients <- data.frame(read_excel(data_file_name, sheet="baseline chars")) %>% select(PatientName) %>% distinct(PatientName)
+# print
+# patients %>% filter(!(PatientName %in% edss_pdds_data$PatientName)) %>% print()
+# 0400-002 and 0411-005 appear in baseline covars but not in EDSS at all;
+# but they are not dropped from the data here because they have recorded MSFC values
+######
+
+# add the list of patients we drop to the consort
+add_to_consort(c("0256-013"), 
+                "recorded in EDSS and PDDS, but not in baseline chars", "impute_edss_pdds.R")
+
+add_to_consort(c("0256-013"), 
+                "recorded in EDSS and PDDS, but not in baseline chars", "impute_edss_pdds.R",
+                no_exceptions=TRUE)
 
 # create a separate dataframe that remembers whether edss and pdds are missing
 # for the purpose of spaghetti plots
@@ -212,6 +231,9 @@ imputed_data <- impute_missing_values(edss_pdds_data, impute_method)
 # debug statement below
 imputed_data %>% inner_join(treatment_data, by="PatientName") %>% inner_join(edss_pdds_missing, by=c("PatientName", "month")) %>% slice_head(n=50) %>% select(PatientName, total_edss_score, treatment_group, edss_missing) %>% print()
 
+# NOTE: some patients don't have any recorded values, but they are
+# still not considered to be "dropped" from the analysis because
+# they have some recorded for MSFC
 # save the imputed dataset to an RDS file
 saveRDS(imputed_data, file="imputed_edss_pdds_data.RDS")
 
@@ -236,6 +258,9 @@ edss_censoring_time <- censoring_times %>% select(PatientName, edss_censor)
 # get the edss and pdds data that is ready for imputation
 edss_pdds_data <- prepare_edss_data(edss_data, pdds_data, edss_censoring_time, include_exceptions=FALSE)
 
+# NOTE: some patients don't have any recorded values, but they are
+# still not considered to be "dropped" from the analysis because
+# they have some recorded for MSFC
 # impute the missing values using the user-specified imputation method
 imputed_data <- impute_missing_values(edss_pdds_data, impute_method)
 saveRDS(imputed_data, file="imputed_edss_pdds_data_no_exceptions.RDS")

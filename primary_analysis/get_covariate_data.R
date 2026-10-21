@@ -127,6 +127,15 @@ baseline_data <- data.frame(read_excel(data_file_name, sheet="baseline chars"))
 baseline_data <- baseline_data %>%
     filter(PatientName != no_data_patient)
 
+# add the no_data_patient to the consort
+add_to_consort(c(no_data_patient), 
+                "no measurement of baseline characteristics", "get_covariate_data.R")
+
+# add the no_data_patient to the consort
+add_to_consort(c(no_data_patient), 
+                "no measurement of baseline characteristics", "get_covariate_data.R",
+                no_exceptions=TRUE)
+
 
 # set seed for generating treatment groups
 set.seed(0)
@@ -147,6 +156,7 @@ saveRDS(treatment_data, file="treatment_data.RDS")
 # clean the baseline data using all clusters
 baseline_data_all_clusters <- process_data(baseline_data)
 
+# debug statement
 baseline_data_all_clusters %>% filter(PatientName == "0100-047") %>% slice_head(n=10) %>% print()
 
 # read the data for baseline covariates (variables that are indicative

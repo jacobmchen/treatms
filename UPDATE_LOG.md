@@ -312,3 +312,7 @@ Summary of updates since most recent one:
 2026-10-19
 
 - For analysis of secondary outcome MSFC, we have to do an inner join when merging treatment data because not every patient had enough data for us to compute an MSFC value.
+
+2026-10-21
+
+- Update the code of the primary analysis that allows us to keep track of a consort, which is a document that tells us which patients are dropped at what point and why. We will implement this by adding a new file that initializes a consort file and have subsequent code in the primary analysis continually update it.
