@@ -18,9 +18,10 @@ Note that it is necessary to re-run the entire analysis with these different opt
 - The file ``impute_msfc.R`` imputes MSFC values for every time point in the study and saves the imputed data into .RDS files for future use. Like above, the user can specify how the imputation happens. The imputation options are the same as above. For t25fw best case values are 0, and worst case values are 80. For nhpt best case values are 0, and worst case values are 200.
 - The file ``event_time.R`` computes the event time (sustained disability progression) for each individual, if they experienced the event. For EDSS, we use the imputed values from ``impute_edss_pdds.R``. For t25fw and nhpt, we use the imputed values from ``impute_msfc.R``. To run this file, it needs the outputs from the three previous files (``compute_censoring_time.R``, ``get_covariate_data.R``, ``impute_edss_pdds.R``, and ``impute_msfc.R``). 
     - The code that computes event times is able to handle inputs with missing values for values, but not for months.
-- The file ``combine_data.R`` combines the data computed in the above three files into one centralized dataset. In this file, we also simulate random treatment assignments.
+- The file ``combine_data.R`` combines the data computed in the above three files into one centralized dataset.
 - The file ``rmst_analysis.R`` executes the RMST analysis and outputs the RMST for each treatment group as well as the square root of the variance for the difference in means estimate. This file also contains simulations where we try different time windows and evaluate the variance. If running the simulations are not desired, then simply exit the program early.
 - The file ``plot_simulation_results.R`` plots simulation results from the variance simulations in the ``rmst_analysis.R`` file.
+- The file ``save_consort.R`` saves the consort data into csv files.
 
 In the folder ``secondary_analyses``, all of the files for the secondary analysis are included. Each file executes a separate analysis. This folder also includes code for simulating the likelihood ratio tests on a cluster using the SLURM workload manager.
 
