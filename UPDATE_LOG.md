@@ -316,3 +316,8 @@ Summary of updates since most recent one:
 2026-10-21
 
 - Update the code of the primary analysis that allows us to keep track of a consort, which is a document that tells us which patients are dropped at what point and why. We will implement this by adding a new file that initializes a consort file and have subsequent code in the primary analysis continually update it.
+
+2026-10-27
+
+- Received raw, updated COVID substudy data. Will need to update the data processing for breakthrough disease and new/worsening symptoms to pivot the data manually. The updated new/worsening symptom spreadsheet does not have a column for FromGroup, but that is probably fine since we are just worried about a binary yes/no for whether patients experience new/worsening symptoms.
+- Found some discrepancies between processing the outcomes using the updated data and the previous data. Will await updates from data manager.

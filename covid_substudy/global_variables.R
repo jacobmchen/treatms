@@ -18,10 +18,10 @@ substudy_end <- ymd("2022-03-31")
 
 # save file name for the data with some covariates and breakthrough, adherence,
 # and postpone data
-covar_breakthrough_med_postpone <- "covid_substudy_data/covar_breakthrough_med_postpone.xlsx"
+covar_breakthrough_med_postpone <- "covid_substudy_data/covar_breakthrough_med_postpone_2026-10-27.xlsx"
 
 # save file name for new/worsening symptoms data
-new_worse <- "covid_substudy_data/new_worse.xlsx"
+new_worse <- "covid_substudy_data/new_worse_2026-10-27.xlsx"
 
 # save file name for other covariates data, which include MSSS score and degree of
 # social distancing
