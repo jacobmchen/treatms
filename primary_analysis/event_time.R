@@ -265,6 +265,9 @@ print(head(event_times))
 no_event_time <- event_times %>% 
     filter(is.na(event_time))
 
+# save the list of patients with no event time
+saveRDS(no_event_time$PatientName, "no_event_time_patients.RDS")
+
 # add the list of patients we drop to the consort
 add_to_consort(no_event_time$PatientName, 
                 "less than 3 observations for all of EDSS, T25FW, and NHPT", "event_time.R")
@@ -288,6 +291,9 @@ print(head(event_times_no_exceptions))
 # get the list patients for whom we could not calculate an event time
 no_event_time <- event_times_no_exceptions %>% 
     filter(is.na(event_time))
+
+# save the list of patients with no event time
+saveRDS(no_event_time$PatientName, "no_event_time_no_exceptions_patients.RDS")
 
 # add the list of patients we drop to the consort
 add_to_consort(no_event_time$PatientName, 

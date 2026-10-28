@@ -321,3 +321,12 @@ Summary of updates since most recent one:
 
 - Received raw, updated COVID substudy data. Will need to update the data processing for breakthrough disease and new/worsening symptoms to pivot the data manually. The updated new/worsening symptom spreadsheet does not have a column for FromGroup, but that is probably fine since we are just worried about a binary yes/no for whether patients experience new/worsening symptoms.
 - Found some discrepancies between processing the outcomes using the updated data and the previous data. Will await updates from data manager.
+
+- In the primary analysis, we drop patients because there are less than 3 observed measurements. We would like to change that to only dropping patients with less than 3 observed measurements and disease progression at the second measurement.
+- Currently writing code on analyzing the distribution of patients with less than 3 observed measurements of EDSS and MSFC. Need to plan what the best way of presenting this data will be.
+
+2026-10-28
+
+- We want to know whether patients have exactly month 0 and month 6 measurements for each of EDSS, T25FW, and NHPT. So will need to create a separate dataframe for this.
+- The analyses are stored in the file ``analyze_no_event_time_patients.R``.
+- We still need to update the primary analysis to keep patients with two measurements but no progression by the second measurement as being censored at their second measurement.

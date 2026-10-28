@@ -22,6 +22,7 @@ Note that it is necessary to re-run the entire analysis with these different opt
 - The file ``rmst_analysis.R`` executes the RMST analysis and outputs the RMST for each treatment group as well as the square root of the variance for the difference in means estimate. This file also contains simulations where we try different time windows and evaluate the variance. If running the simulations are not desired, then simply exit the program early.
 - The file ``plot_simulation_results.R`` plots simulation results from the variance simulations in the ``rmst_analysis.R`` file.
 - The file ``save_consort.R`` saves the consort data into csv files.
+- The file ``analyze_no_event_time_patients.R`` performs some exploratory data analysis on patients who do not have an event time because they have less than 3 measurements for all of EDSS, T25FW, and NHPT.
 
 In the folder ``secondary_analyses``, all of the files for the secondary analysis are included. Each file executes a separate analysis. This folder also includes code for simulating the likelihood ratio tests on a cluster using the SLURM workload manager.
 
