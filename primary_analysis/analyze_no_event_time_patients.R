@@ -181,7 +181,7 @@ t25fw_summary <- t25fw_data %>%
     summarize(t25fw_has_baseline = has_baseline(month, trial_average_seconds),
               t25fw_two_measures = two_measurements(month, trial_average_seconds),
               t25fw_month_0_6 = month_0_6(month, trial_average_seconds),
-              t25fw_second_measure_progress = disease_progression(month, trial_average_seconds))
+              t25fw_second_measure_progress = disease_progression(month, trial_average_seconds, value_type="MSFC"))
 
 # join the t25fw data to the summary data
 summary_data <- summary_data %>%
@@ -195,7 +195,7 @@ nhpt_summary <- nhpt_data %>%
     summarize(nhpt_has_baseline = has_baseline(month, hand_average_seconds),
               nhpt_two_measures = two_measurements(month, hand_average_seconds),
               nhpt_month_0_6 = month_0_6(month, hand_average_seconds),
-              nhpt_second_measure_progress = disease_progression(month, hand_average_seconds))
+              nhpt_second_measure_progress = disease_progression(month, hand_average_seconds, value_type="MSFC"))
 
 # join the nhpt data to the summary data
 summary_data <- summary_data %>%
@@ -205,8 +205,11 @@ summary_data %>% slice_head(n=10) %>% print(width=Inf)
 # write to csv file
 write.csv(summary_data, "no_event_time_summary.csv", row.names=FALSE)
 
-# how many are observed at month 6 for all of EDSS and MSFC?
+# how many are observed at month 0 and 6 for all of EDSS and MSFC?
 summary_data %>% filter(edss_month_0_6 == 1 & t25fw_month_0_6 == 1 & nhpt_month_0_6 == 1) %>% print()
 
 # how many have disease progression that at the second measurement for at least one of EDSS or MSFC?
 summary_data %>% filter(edss_second_measure_progress == 1 | t25fw_second_measure_progress == 1 | nhpt_second_measure_progress == 1) %>% print()
+
+# how many have only less than 2 visits recorded?
+summary_data %>% select(c(PatientName, edss_two_measures, t25fw_two_measures, nhpt_two_measures)) %>% filter(edss_two_measures != 1 & t25fw_two_measures != 1 & nhpt_two_measures != 1) %>% print()
