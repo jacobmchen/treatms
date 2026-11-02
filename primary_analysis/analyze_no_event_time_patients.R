@@ -11,29 +11,6 @@ no_event_time_patients <- readRDS("no_event_time_patients.RDS")
 
 print(no_event_time_patients)
 
-# create a function that takes as input a months vector and a values vector
-# and returns a list containing the two vectors where missing values in the
-# values vector are removed and the corresponding months are also removed
-observed_months_values <- function(months, values) {
-    # create two new vectors that are copies of the original months
-    # and values except they only keep the months with observed values
-    observed_months <- c()
-    observed_values <- c()
-    # iterate through all the values
-    for (i in 1:length(values)) {
-        # save the value if it is observed, otherwise, skip it
-        if (!is.na(values[i])) {
-            observed_months <- c(observed_months, months[i])
-            observed_values <- c(observed_values, values[i])
-        }
-    }
-    # update the months and values to just observed values
-    months <- observed_months
-    values <- observed_values
-
-    return(list(months=months, values=values))
-}
-
 # declare a function that returns 1 if there is a month 0 baseline
 # measurement and 0 otherwise
 has_baseline <- function(months, values) {
@@ -206,10 +183,13 @@ summary_data %>% slice_head(n=10) %>% print(width=Inf)
 write.csv(summary_data, "no_event_time_summary.csv", row.names=FALSE)
 
 # how many are observed at month 0 and 6 for all of EDSS and MSFC?
+print("observed at month 0 and 6")
 summary_data %>% filter(edss_month_0_6 == 1 & t25fw_month_0_6 == 1 & nhpt_month_0_6 == 1) %>% print()
 
 # how many have disease progression that at the second measurement for at least one of EDSS or MSFC?
-summary_data %>% filter(edss_second_measure_progress == 1 | t25fw_second_measure_progress == 1 | nhpt_second_measure_progress == 1) %>% print()
+print("disease progression at second measurement")
+summary_data %>% select(c(PatientName, edss_second_measure_progress, t25fw_second_measure_progress, nhpt_second_measure_progress)) %>% filter(edss_second_measure_progress == 1 | t25fw_second_measure_progress == 1 | nhpt_second_measure_progress == 1) %>% print()
 
-# how many have only less than 2 visits recorded?
+# how many have less than 2 visits recorded?
+print("less than 2 visits recorded")
 summary_data %>% select(c(PatientName, edss_two_measures, t25fw_two_measures, nhpt_two_measures)) %>% filter(edss_two_measures != 1 & t25fw_two_measures != 1 & nhpt_two_measures != 1) %>% print()

@@ -23,41 +23,30 @@ source("global_variables.R")
 #' possible to compute the event time if there is no baseline value
 #' or if there are less than 2 observed values after baseline.
 compute_event_time <- function(months, values, value_type="EDSS") {
-    # create two new vectors that are copies of the original months
-    # and values except they only keep the months with observed values
-    observed_months <- c()
-    observed_values <- c()
-    # iterate through all the values
-    for (i in 1:length(values)) {
-        # save the value if it is observed, otherwise, skip it
-        if (!is.na(values[i])) {
-            observed_months <- c(observed_months, months[i])
-            observed_values <- c(observed_values, values[i])
-        }
-    }
-    # update the months and values to just observed values
-    months <- observed_months
-    values <- observed_values
+    # get the version of months and values with only the observed values
+    observed <- observed_months_values(months, values)
 
-    # if there is only one value or 0 values in the vector, we cannot
+    # update the months and values to just observed values
+    months <- observed[[1]]
+    values <- observed[[2]]
+
+    # if there is only one value or zero values in the vector, we cannot
     # compute the event time
     if (length(months) <= 1) {
         return(NA)
     }
 
-    # if every observed value is missing, then we cannot compute the 
+    # first, if every observed value is missing, then we cannot compute the 
     # event time
     if (sum(is.na(values)) > 0) {
+        # if we enter this if statement, that means that
         # we encounter missing values in the vector of values, which should
         # not have any missing values because we removed all missing values
-        stop("Fatal error: For some patient, missing values were not removed.")
-        return(NA)
-    }
 
-    # second, check if it is possible to compute an event time
-    if (length(values) < 3) {
-        # if there is only one observed value after the baseline, then we cannot
-        # compute sustained disease progression
+        # thus, stop the program and return a fatal error
+        stop("Fatal error: For some patient, missing values were not removed.")
+
+        # return NA as a failsafe
         return(NA)
     }
 
@@ -84,7 +73,32 @@ compute_event_time <- function(months, values, value_type="EDSS") {
         threshold <- values[1] * 1.2
     }
 
-    # check if there was sustained disability progression
+    # second, check if we have exactly 2 measurements (this if
+    # statement captures those with only 2 measurements because
+    # an if statement above captures those with less than or equal
+    # to 1 measurements)
+    if (length(values) < 3) {
+        # check that the length of the values is exactly 2 before proceeding
+        if (length(values) != 2) stop("Fatal error: expected 2 measurements but did not get that")
+
+        # check if second measurement progressed
+        if (values[2] >= threshold) {
+            # if second measurement progressed, return -1 because we aren't able
+            # to confirm whether they progressed, and this patient should be
+            # dropped from the analysis;
+            # -1 here is a flag to indicate that this patient should be dropped;
+            # we need to use a -1 flag because a patient needs to be dropped if
+            # AT LEAST one of EDSS, T25FW, or NHPT satisfies this criterion
+            return(-1)
+        } else {
+            # otherwise, return Inf, because they never experienced the event, so
+            # we can consider them censored at their second measurement
+            return(Inf)
+        }
+    }
+
+    # check if there was sustained disability progression as we have enough
+    # measurements to evaluate this
     # iterate from the first non-baseline value to the second to last value
     for (i in 2:(length(values)-1)) {
         # check if two consecutive values are greater than or equal to the threshold
@@ -248,8 +262,14 @@ select_event_time <- function(edss, t25fw, nhpt) {
 
     # if all values are missing, return a missing value
     if (sum(is.na(vec)) == length(vec)) return(NA)
+
+    # check if we have the -1 flag, which indicates that an individual
+    # had only two measurements and progressed at the second measurement;
+    # this means we can't confirm their disease progression
+    if (min(vec, na.rm=TRUE) == -1) return(NA)
+
     # otherwise, return the minimum value based on the observed values
-    else return(min(vec, na.rm=TRUE))
+    return(min(vec, na.rm=TRUE))
 }
 
 # choose the event time corresponding to the event time that happened
@@ -270,7 +290,7 @@ saveRDS(no_event_time$PatientName, "no_event_time_patients.RDS")
 
 # add the list of patients we drop to the consort
 add_to_consort(no_event_time$PatientName, 
-                "less than 3 observations for all of EDSS, T25FW, and NHPT", "event_time.R")
+                "not enough measurements to compute event time", "event_time.R")
 
 # actually drop the patients who have no censoring time
 event_times <- event_times %>%
@@ -297,7 +317,7 @@ saveRDS(no_event_time$PatientName, "no_event_time_no_exceptions_patients.RDS")
 
 # add the list of patients we drop to the consort
 add_to_consort(no_event_time$PatientName, 
-                "less than 3 observations for all of EDSS, T25FW, and NHPT", "event_time.R",
+                "not enough measurements to compute event time", "event_time.R",
                 no_exceptions=TRUE)
 
 # actually drop the patients who have no censoring time

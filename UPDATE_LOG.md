@@ -329,4 +329,9 @@ Summary of updates since most recent one:
 
 - We want to know whether patients have exactly month 0 and month 6 measurements for each of EDSS, T25FW, and NHPT. So will need to create a separate dataframe for this.
 - The analyses are stored in the file ``analyze_no_event_time_patients.R``.
-- We still need to update the primary analysis to keep patients with two measurements but no progression by the second measurement as being censored at their second measurement.
+
+2026-11-02
+
+- Update the primary analysis to keep patients with two measurements but no progression by the second measurement as being censored at their second measurement. Patients who only have two measurements but progress at the second measurement will be considered as having missing values because we do not know whether their progression is confirmed at a third visit.
+- For event time, still need to make sure with the team what to do about cases where one of EDSS, T25FW, or NHPT has only 2 measurements where the second measurement progresses, but other repeated outcomes have enough measurements to conclude no progression or progression at a later time.
+- Updated covid substudy data for breakthrough disease and new/worsening symptoms.

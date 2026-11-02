@@ -414,3 +414,27 @@ add_to_consort <- function(patients, reason, filename, no_exceptions=FALSE) {
 
     # don't return anything
 }
+
+# create a function that takes as input a months vector and a values vector
+# and returns a list containing the two vectors where missing values in the
+# values vector are removed and the corresponding months are also removed
+observed_months_values <- function(months, values) {
+    # create two new vectors that are copies of the original months
+    # and values except they only keep the months with observed values
+    observed_months <- c()
+    observed_values <- c()
+    # iterate through all the values
+    for (i in 1:length(values)) {
+        # save the value if it is observed, otherwise, skip it
+        if (!is.na(values[i])) {
+            observed_months <- c(observed_months, months[i])
+            observed_values <- c(observed_values, values[i])
+        }
+    }
+    # update the months and values to just observed values
+    months <- observed_months
+    values <- observed_values
+
+    return(list(months=months, values=values))
+}
+
