@@ -340,3 +340,4 @@ Summary of updates since most recent one:
 
 - Need to update the some of the details regarding the creation of the consort so that it is more specific to the reason why someone might be dropped.
 - We also agreed that in the sensitivity analyses for the RMST analysis where we do best/worst case imputation, we will be able to impute disease progression for individuals only measured at month 0 and month 6. If we are doing worst case imputation and they progress at month 6, then we count them as having disease progression. If we are doing best case imputation and they progress at month 6, then we count them as NOT having disease progression.
+- For ``event_time.R``, we need to have different versions of it that processes the event time differently based on which sensitivity analysis we are doing. For the primary and two sensitivity analyses, we would re-run the whole analysis with the different options.

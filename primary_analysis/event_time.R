@@ -9,6 +9,26 @@ library(mice)
 
 source("global_variables.R")
 
+# read the user input data that specifies how we are computing event time
+args <- commandArgs(trailingOnly = TRUE)
+
+# first check that the user actually entered an argument, if not then
+# exit the program
+if (length(args) < 1) {
+    stop(paste(c("User did not supply argument for how to process event time.",
+         "Usage is: Rscript event_time.R \"primary\"",
+         "Possible options are \"primary\", \"A best, B worst\", \"A worst, B best\""), collapse="\n"))
+}
+
+analysis_options <- c("primary", "A best, B worst", "A worst, B best")
+analysis_method <- args[1]
+
+# make sure that the user entered a valid imputation option
+if (!(analysis_method %in% analysis_options)) {
+    stop(paste(c("User did not input a valid option for computing event time.",
+                 "Possible options are \"primary\", \"A best, B worst\", \"A worst, B best\""), collapse="\n"))
+}
+
 # define a function for computing the event time, if it happens
 #' Compute Event Time
 #' @param months A vector containing the months of the measurements
@@ -22,7 +42,11 @@ source("global_variables.R")
 #' @details Compute the event time for a single individual given their observations. It is not
 #' possible to compute the event time if there is no baseline value
 #' or if there are less than 2 observed values after baseline.
-compute_event_time <- function(months, values, value_type="EDSS") {
+compute_event_time <- function(months, values, treatment, value_type="EDSS") {
+    # the vector treatment will just be a vector with n copies of
+    # the individual's treatment based on where n is the number of observations
+    treatment <- treatment[1]
+
     # get the version of months and values with only the observed values
     observed <- observed_months_values(months, values)
 
@@ -83,13 +107,33 @@ compute_event_time <- function(months, values, value_type="EDSS") {
 
         # check if second measurement progressed
         if (values[2] >= threshold) {
-            # if second measurement progressed, return -1 because we aren't able
-            # to confirm whether they progressed, and this patient should be
-            # dropped from the analysis;
-            # -1 here is a flag to indicate that this patient should be dropped;
-            # we need to use a -1 flag because a patient needs to be dropped if
-            # AT LEAST one of EDSS, T25FW, or NHPT satisfies this criterion
-            return(-1)
+            if (analysis_method == "primary") {
+                # analysis method is primary, so just proceed as normal
+                # if second measurement progressed, return -1 because we aren't able
+                # to confirm whether they progressed, and this patient should be
+                # dropped from the analysis;
+                # -1 here is a flag to indicate that this patient should be dropped;
+                # we need to use a -1 flag because a patient needs to be dropped if
+                # AT LEAST one of EDSS, T25FW, or NHPT satisfies this criterion
+                return(-1)
+            } else if (analysis_method == "A best, B worst") {
+                # if the treatment is A (0), then return the best case scenario, which is that
+                # they did not experience disease progression
+                if (treatment == 0) return(Inf)
+                # otherwise, the treatment is B (1), so return that they progressed at
+                # the second measurement
+                else return(months[2])
+            } else if (analysis_method == "A worst, B best") {
+                # if the treatment is A (0), then return the worst case scenario, which is that
+                # they experienced disease progression
+                if (treatment == 0) return(months[2])
+                # otherwise, the treatment is B (1), so return that they did not progress
+                else return(Inf)
+            } else {
+                # if none of the above strings are given as the analysis_method, stop
+                # the program and throw an error
+                stop("Fatal error: user did not input a valid analysis method")
+            }
         } else {
             # otherwise, return Inf, because they never experienced the event, so
             # we can consider them censored at their second measurement
@@ -128,6 +172,9 @@ censoring_times <- readRDS("censoring_times.RDS")
 # read the data for baseline characteristics, which was computed separately
 baseline_data <- readRDS("baseline_data_merge_states.RDS")
 
+# read the treatment data
+treatment_data <- readRDS("treatment_data.RDS")
+
 # keep a copy of all of the patients
 patients <- edss_data %>% select(PatientName) %>% distinct(PatientName)
 
@@ -142,9 +189,11 @@ imputed_data <- readRDS("imputed_edss_pdds_data.RDS")
 # compute the event time after filling in missing values with MICE
 edss_event_time <- imputed_data %>%
     select(PatientName, month, total_edss_score) %>%
+    # join the patient name data
+    left_join(treatment_data, by="PatientName") %>%
     group_by(PatientName) %>%
     # compute the event time
-    summarize(edss_event = compute_event_time(month, total_edss_score))
+    summarize(edss_event = compute_event_time(month, total_edss_score, treatment_group))
 
 print(edss_event_time)
 
@@ -154,9 +203,10 @@ imputed_data_no_exceptions <- readRDS("imputed_edss_pdds_data_no_exceptions.RDS"
 # compute the event time with no exceptions after filling in missing values with MICE
 edss_event_time_no_exceptions <- imputed_data_no_exceptions %>%
     select(PatientName, month, total_edss_score) %>%
+    left_join(treatment_data, by="PatientName") %>%
     group_by(PatientName) %>%
     # compute the event time
-    summarize(edss_event = compute_event_time(month, total_edss_score))
+    summarize(edss_event = compute_event_time(month, total_edss_score, treatment_group))
 
 print(edss_event_time_no_exceptions)
 
@@ -213,8 +263,9 @@ t25fw_data <- readRDS("t25fw_data.RDS")
 # compute the event time after filling in missing values with MICE
 t25fw_event_time <- t25fw_data %>%
     select(PatientName, month, trial_average_seconds) %>%
+    left_join(treatment_data, by="PatientName") %>%
     group_by(PatientName) %>%
-    summarize(t25fw_event = compute_event_time(month, trial_average_seconds, value_type="MSFC"))
+    summarize(t25fw_event = compute_event_time(month, trial_average_seconds, treatment_group, value_type="MSFC"))
 
 print(t25fw_event_time)
 
@@ -224,10 +275,11 @@ nhpt_data <- readRDS("nhpt_data.RDS")
 # compute the event time after filling in missing values with MICE
 nhpt_event_time <- nhpt_data %>%
     select(PatientName, month, hand_average_seconds) %>%
+    left_join(treatment_data, by="PatientName") %>%
     group_by(PatientName) %>%
     # the imputation method will be none because we already used MICE to impute
     # missing values
-    summarize(nhpt_event = compute_event_time(month, hand_average_seconds, value_type="MSFC"))
+    summarize(nhpt_event = compute_event_time(month, hand_average_seconds, treatment_group, value_type="MSFC"))
 
 print(nhpt_event_time)
 
