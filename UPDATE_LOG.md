@@ -335,3 +335,8 @@ Summary of updates since most recent one:
 - Update the primary analysis to keep patients with two measurements but no progression by the second measurement as being censored at their second measurement. Patients who only have two measurements but progress at the second measurement will be considered as having missing values because we do not know whether their progression is confirmed at a third visit.
 - For event time, still need to make sure with the team what to do about cases where one of EDSS, T25FW, or NHPT has only 2 measurements where the second measurement progresses, but other repeated outcomes have enough measurements to conclude no progression or progression at a later time.
 - Updated covid substudy data for breakthrough disease and new/worsening symptoms.
+
+2026-11-04
+
+- Need to update the some of the details regarding the creation of the consort so that it is more specific to the reason why someone might be dropped.
+- We also agreed that in the sensitivity analyses for the RMST analysis where we do best/worst case imputation, we will be able to impute disease progression for individuals only measured at month 0 and month 6. If we are doing worst case imputation and they progress at month 6, then we count them as having disease progression. If we are doing best case imputation and they progress at month 6, then we count them as NOT having disease progression.

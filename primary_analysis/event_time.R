@@ -288,9 +288,34 @@ no_event_time <- event_times %>%
 # save the list of patients with no event time
 saveRDS(no_event_time$PatientName, "no_event_time_patients.RDS")
 
-# add the list of patients we drop to the consort
-add_to_consort(no_event_time$PatientName, 
-                "not enough measurements to compute event time", "event_time.R")
+# when adding the patients with no event time to the consort, distinguish between
+# having an unconfirmed progression and not having enough measurements
+
+# add a new column to the no event time patients indicating whether they had
+# an unconfirmed progression and only two measurements; 1 means yes and 0 means no
+no_event_time <- no_event_time %>% 
+    # check if -1 appears for each of the event times; if all 3 values are NA, then the
+    # min function returns Inf and gives a warning message, but we can safely ignore
+    # the warning message
+    mutate(unconfirmed_progression = ifelse(min(c(edss_event, t25fw_event, nhpt_event), na.rm=TRUE) == -1, 1, 0)) 
+
+# get the subset of patients who had only two measurements and progressed at the
+# second measurement for at least one of EDSS, T25FW, or NHPT
+unconfirmed_progression <- no_event_time %>%
+    filter(unconfirmed_progression == 1)
+
+# add to the consort the patients who had an unconfirmed progression
+add_to_consort(unconfirmed_progression$PatientName,
+                "experienced unconfirmed progression and only has two measurements for at least one of EDSS, T25FW, or NHPT", "event_time.R")
+
+# get the subset of patients who had 1 or less measurements for all of EDSS, T25FW,
+# and NHPT
+not_enough_data <- no_event_time %>%
+    filter(unconfirmed_progression == 0)
+
+# add to the consort the patients that do not have enough data
+add_to_consort(not_enough_data$PatientName,
+                "one measurement or less for all of EDSS, T25FW, and NHPT", "event_time.R")
 
 # actually drop the patients who have no censoring time
 event_times <- event_times %>%
@@ -315,20 +340,43 @@ no_event_time <- event_times_no_exceptions %>%
 # save the list of patients with no event time
 saveRDS(no_event_time$PatientName, "no_event_time_no_exceptions_patients.RDS")
 
-# add the list of patients we drop to the consort
-add_to_consort(no_event_time$PatientName, 
-                "not enough measurements to compute event time", "event_time.R",
+# add a new column to the no event time patients indicating whether they had
+# an unconfirmed progression and only two measurements; 1 means yes and 0 means no
+no_event_time <- no_event_time %>% 
+    # check if -1 appears for each of the event times; if all 3 values are NA, then the
+    # min function returns Inf and gives a warning message, but we can safely ignore
+    # the warning message
+    mutate(unconfirmed_progression = ifelse(min(c(edss_event, t25fw_event, nhpt_event), na.rm=TRUE) == -1, 1, 0)) 
+
+# get the subset of patients who had only two measurements and progressed at the
+# second measurement for at least one of EDSS, T25FW, or NHPT
+unconfirmed_progression <- no_event_time %>%
+    filter(unconfirmed_progression == 1)
+
+# add to the consort the patients who had an unconfirmed progression
+add_to_consort(unconfirmed_progression$PatientName,
+                "experienced unconfirmed progression and only has two measurements for at least one of EDSS, T25FW, or NHPT", "event_time.R",
+                no_exceptions=TRUE)
+
+# get the subset of patients who had 1 or less measurements for all of EDSS, T25FW,
+# and NHPT
+not_enough_data <- no_event_time %>%
+    filter(unconfirmed_progression == 0)
+
+# add to the consort the patients that do not have enough data
+add_to_consort(not_enough_data$PatientName,
+                "one measurement or less for all of EDSS, T25FW, and NHPT", "event_time.R",
                 no_exceptions=TRUE)
 
 # actually drop the patients who have no censoring time
 event_times_no_exceptions <- event_times_no_exceptions %>%
     filter(!is.na(event_time))
 
-# save the censoring times as a file
+# save the event times as a file
 saveRDS(event_times_no_exceptions, file="event_times_no_exceptions.RDS")
 
-# check if there are differences if you use exceptions or not
-# there are 118 patients for whom event time is different when
+# check if there are differences if you use exceptions or not;
+# there are 28 patients for whom event time is different when
 # you don't use exception findings
 event_times %>% full_join(event_times_no_exceptions, by="PatientName") %>% 
     select(c(PatientName, edss_event.x, edss_event.y)) %>% filter(edss_event.x != edss_event.y) %>% print()
