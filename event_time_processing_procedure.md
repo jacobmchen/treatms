@@ -19,8 +19,8 @@ Input: (1) vector of months of measurements, (2) vector of values of outcome mea
 - If the total number of measurements is less than or equal to 1,
     - Output: NA for the censoring time, and NA for the event time.
 
-- If T <= C,
-    - Output: C for the censoring time, and T for the event time.
+- If T < C (by definition, T cannot have the same value as C because a progression must be confirmed),
+    - Output: C for the censoring time, and T for the event time. Note that, for the purposes of an RMST analysis, only the smaller value of T and C matters. 
 - Otherwise,
     - If the value of the final measurement is greater than or equal to the threshold,
         - Change the censoring time C to be the month of the second to last measurement.
