@@ -31,4 +31,4 @@ In the folder ``secondary_analyses``, all of the files for the secondary analysi
 
 The folder ``pdds_explore`` contains some code plotting histograms for the PDDS score at various time intervals as well as the histograms themselves.
 
-The file ``update_log.md`` contains detailed updates and notes by date for this repository.
+The file ``UPDATE_LOG.md`` contains detailed updates and notes by date for this repository.
