@@ -2,31 +2,36 @@
 
 ## Definitions
 
-- Censoring time: The time (in months from baseline) at which the participant is last observed in the study. Month 0 denotes the baseline visit.
-- Event time: The time (in months from baseline) at which a participant is first observed to progress and is sustained in the subsequent visit. An event time of infinity means that the event did not occur for a participant.
+- Baseline date: The earleist visit date for a particular patient.
+- Sustained disabiltiy progression: Let $\gamma$ be some threshold above which we consider a patient to have progressed. Sustained disability progression is defined as a visit where a value above $\gamma$ is observed AND a subsequent visit at least 180 days later also observes a value above $\gamma$.
+- Censoring time: The time (in days from baseline) at which the participant is last observed in the study.
+- Event time: The time (in days from baseline) at which a participant is first observed to experience sustained disability progression. An event time of infinity means that the event did not occur for a participant.
 
 There are three repeated outcome measures: EDSS, T25FW, and NHPT. Each of these will be referred to as simply "outcome" below.
 
 ## Procedure for Deciding Censoring Time and Event Time for One Outcome
 
-Input: (1) vector of months of measurements, (2) vector of values of outcome measurements.
+Input: (1) vector of visit dates of measurements, (2) vector of values of outcome measurements.
 
-- Decide the threshold for disease progression as defined in the SAP depending on whether the outcome is EDSS, T25FW, or NHPT.
+- Decide the threshold $\gamma$ for disease progression as defined in the SAP depending on whether the outcome is EDSS, T25FW, or NHPT.
 
-- Define C as the censoring time, which is the month of the last measurement.
-- Define T as the event time, which is the month at which a value of the measurement is greater than or equal to the threshold and remains greater than or equal to the threshold at the next measurement. If the event does not occur, T is set to infinity.
+- Define B as the baseline visit date.
 
-- If the total number of measurements is less than or equal to 1,
-    - Output: NA for the censoring time, and NA for the event time.
+- Let $k$ be the visit date of the final measurement.
 
-- If T < C (by definition, T cannot have the same value as C because a progression must be confirmed),
-    - Output: C for the censoring time, and T for the event time. Note that, for the purposes of an RMST analysis, only the smaller value of T and C matters. 
-- Otherwise,
-    - If the value of the final measurement is greater than or equal to the threshold,
-        - Change the censoring time C to be the month of the second to last measurement.
-        - Output: C for the censoring time, and infinity for the event time.
-    - Otherwise,
-        - Output: C for the censoring time, and infinity for the event time.
+- If there is only one visit,
+    - Output: $k$ for the censoring time, and $\infty$ for the event time.
+
+- Let $k_{-1}$ be the visit date of the second to last measurement.
+- Let $t$ be the visit date of the first sustained disability progression. If sustained disability progression does not occur, $t=\infty$.
+
+- If $t < k$,
+    - Output: $k$ for the censoring time, and $t$ for the event time.
+- Else,
+    - If the outcome at visit date $k$ is above $\gamma$,
+        - Output: $k-1$ for the censoring time, and $\infty$ for the event time.
+    - Else,
+        - Output: $k_{-1}$ for the censoring time, and $\infty$ for the event time. 
 
 ## Procedure for Deciding Censoring Time and Event Time for a Participant
 
