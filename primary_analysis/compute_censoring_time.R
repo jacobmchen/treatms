@@ -9,14 +9,60 @@ library(readxl)
 # package for operations on manipulating data
 library(tidyverse)
 
+# read the user input data that specifies how we are imputing EDSS
+args <- commandArgs(trailingOnly = TRUE)
+
+# first check that the user actually entered an argument, if not then
+# exit the program
+if (length(args) < 1) {
+    stop(paste(c("User did not supply argument for how to process values of EDSS with an exception finding.",
+         "Usage is: Rscript compute_censoring_time.R \"exclude exceptions\"",
+         "Possible options are \"exclude exceptions\", \"include exceptions\""), collapse="\n"))
+}
+
+analysis_options <- c("exclude exceptions", "include exceptions")
+exceptions_flag <- args[1]
+
+# make sure that the user entered a valid imputation option
+if (!(exceptions_flag %in% analysis_options)) {
+    stop(paste(c("User did not input a valid option for processing EDSS.",
+                 "Possible options are \"exclude exceptions\", \"include exceptions\""), collapse="\n"))
+}
+
 # read the data for EDSS
 edss_data <- data.frame(read_excel(data_file_name, sheet="edss"))
 
 # keep a copy of all of the patients from the baseline chars sheet
 patients <- data.frame(read_excel(data_file_name, sheet="baseline chars")) %>% select(PatientName) %>% distinct(PatientName)
 
-# get the censoring time for edss
-edss_censoring_time <- edss_data %>%
+# get the censoring time for edss, based on whether we are including or
+# excluding values with exception findings
+
+# make a copy of the dataset
+edss_censoring_time <- edss_data
+
+# if the user indicated not to use values with an exception,
+# then filter them out
+if (exceptions_flag == "exclude exceptions") {
+    edss_censoring_time <- edss_censoring_time %>%
+        # only keep rows where exception findings value is not Yes
+        filter(fs_finding != "Yes")
+}
+
+edss_censoring_time <- edss_censoring_time %>%
+    # keep only the relevant columns
+    select(PatientName, visit_date, total_edss_score) %>%
+    # get rid of rows where the EDSS score is not measured
+    filter(!is.na(total_edss_score)) %>%
+    # group by the patient name
+    group_by(PatientName)
+
+edss_censoring_time %>% slice_head(n=10) %>% print()
+
+print(difftime(edss_censoring_time$visit_date[2], edss_censoring_time$visit_date[1], units="days"))
+
+q()
+
     # replace Month with empty string then cast the string as an integer
     mutate(month = as.integer(gsub("Month ", "", FormGroup))) %>%
     # keep only patient name, month, and edss score columns
@@ -32,6 +78,7 @@ edss_censoring_time <- edss_data %>%
     # rename the column
     rename(edss_censor=month)
 
+    
 # read the data for T25FW and 9HPT
 msfc_data <- data.frame(read_excel(data_file_name, sheet="msfc"))
 # compute the averages for the three relevant metrics; the compute_average_msfc

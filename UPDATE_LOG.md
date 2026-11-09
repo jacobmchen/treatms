@@ -344,4 +344,17 @@ Summary of updates since most recent one:
 
 2026-11-05
 
-- Analyze relapse data to see if there are any instances where the relapse date is further in the future than the visit date. The code for this analysis is in ``secondary_analyses/analyze_relapse.R``.
+- Analyze relapse data to see if there are any instances where the relapse date is further in the future than the visit date. The code for this analysis is in ``secondary_analyses/verify_relapse.R``.
+
+2026-11-09
+
+- Need to update the code for deciding censoring time and event time based on new rules. Furthermore, need to update the computation of censoring time and event time to use number of days since baseline visit instead of the month formgroup. This will allow us to use interim information as well, basically.
+- This may be a good opportunity to refactor the code anyways because it is getting somewhat unwiedly. The imputation code also needs to be be re-written probably because we are doing something different for it now.
+- Should still keep censoring time computation and event time computation separate because in sensitivity analyses we may want to impute.
+
+- When computing censoring time, need to supply an argument to decide if we are allowing measurements of EDSS with exception findings. When computing event time and censoring time, the first measurement will be considered the baseline measurement, regardless of whether it is "Month 0" or not.
+- Move the compute_event_time function to global variables because we now need to know whether a patient had an event time that is not infinity to know what their censoring time is.
+- Based on the new procedure for computing censoring time, we need to know an individual's event time to compute their censoring time. Thus, imputing values of EDSS or MSFC for the sensitivity analyses needs to happen first, before computing those metrics. For now, leave a note in the README not to run those imputation files. Need to clarify how to do imputation with the team later.
+- To prevent repeating computatioins for the event time, compute the event time then the censoring time.
+
+- For ``secondary_analyses/verify_relapse.R``, changed the code for finding missing values to keep the original value of symptom onset date. There are three possibilities: NA, "u/k", or "n/a". NA means the data cell is blank. The other two options means those strings were in the data cell instead of date value.

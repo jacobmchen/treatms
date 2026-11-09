@@ -41,26 +41,26 @@ Input: (1) vector of visit dates of measurements, (2) vector of values of outcom
 
 ## Examples for Deciding Censoring and Event Times for One Outcome
 
-For simplicity, suppose that the threshold for disease progression is always 5.
+Below, suppose that the measurements are EDSS. Because the baseline value is always 4, the threshold for disease progression will be 5 for all of the examples below.
 
-Input: Vector of months (0, 6, 12, 18), vector of measurements (3, 5, 4, 4).
+Input: Vector of months (0, 6, 12, 18), vector of measurements (4, 5, 4, 4).
 Output: Censoring time is Month 18, and event time is infinity.
 
-Input: Vector of months (0, 6, 18, 36), vector of measurements (3, 5, 6, 4).
+Input: Vector of months (0, 6, 18, 36), vector of measurements (4, 5, 6, 4).
 Output: Censoring time is Month 36, and event time is Month 6.
 
-Input: Vector of months (0, 6, 18, 36), vector of measurements (3, 5, 4, 6).
+Input: Vector of months (0, 6, 18, 36), vector of measurements (4, 5, 4, 6).
 Output: Censoring time is Month 18, and event time is infinity.
 
-Input: Vector of months (0, 6, 18, 36), vector of measurements (3, 4, 5, 6).
+Input: Vector of months (0, 6, 18, 36), vector of measurements (4, 4, 5, 6).
 Output: Censoring time is Month 36, and event time is Month 18.
 
-Input: Vector of months (0, 6, 18, 42), vector of measurements (3, 4, 4, 7).
+Input: Vector of months (0, 6, 18, 42), vector of measurements (4, 4, 4, 7).
 Output: Censoring time is Month 18, and event time is infinity.
 
-Input: Vector of months (0, 12), vector of measurements (3, 4).
+Input: Vector of months (0, 12), vector of measurements (4, 4).
 Output: Censoring time is Month 12, and event time is infinity.
 
-Input: Vector of months (0, 6), vector of measurements (3, 5).
+Input: Vector of months (0, 6), vector of measurements (4, 5).
 Output: Censoring time is Month 0, and event time is infinity.
 

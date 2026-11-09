@@ -415,26 +415,212 @@ add_to_consort <- function(patients, reason, filename, no_exceptions=FALSE) {
     # don't return anything
 }
 
-# create a function that takes as input a months vector and a values vector
-# and returns a list containing the two vectors where missing values in the
-# values vector are removed and the corresponding months are also removed
-observed_months_values <- function(months, values) {
-    # create two new vectors that are copies of the original months
-    # and values except they only keep the months with observed values
-    observed_months <- c()
+###
+# Below are functions related to computing event time and censoring time
+# for repeated outcome measures.
+###
+
+# create a function that takes as input a visits vector and a values vector
+# and returns a list containing the two vectors where missing values in both vectors 
+# are removed
+observed_visits_values <- function(visits, values) {
+    # create two new vectors that are copies of the original visits
+    # and values except they only keep the visits with observed values
+    observed_visits <- c()
     observed_values <- c()
     # iterate through all the values
     for (i in 1:length(values)) {
         # save the value if it is observed, otherwise, skip it
         if (!is.na(values[i])) {
-            observed_months <- c(observed_months, months[i])
+            observed_visits <- c(observed_visits, visits[i])
             observed_values <- c(observed_values, values[i])
         }
     }
-    # update the months and values to just observed values
-    months <- observed_months
+    # update the visits and values to just observed values
+    visits <- observed_visits
     values <- observed_values
 
-    return(list(months=months, values=values))
+    return(list(visits=visits, values=values))
+}
+
+# define a function that returns the threshold for disease progression 
+# based on the baseline value and the value type
+determine_threshold <- function(baseline_value, value_type="EDSS") {
+    # initialize a threshold variable
+    threshold <- 0
+
+    # check if the value type is EDSS
+    if (value_type == "EDSS") {
+        # determine the threshold value for EDSS
+        if (baseline_value <= 5.5) {
+            threshold <- baseline_value + 1
+        } else {
+            threshold <- baseline_value + 0.5
+        }
+    } else if (value_type == "MSFC") {
+        # no need to round values if the value type is MSFC, which
+        # includes T25FW and NHPT
+
+        # the threshold value is 1.2 times the baseline value
+        threshold <- values[1] * 1.2
+    }
+
+    return(threshold)
+}
+
+# define a function for computing the event time, if it happens
+#' Compute Event Time
+#' @param visits A vector containing the visit dates of the measurements
+#' @param values A vector containing the observed values of the outcome
+#' @param treatment A vector of copies of the treatment value
+#' @param value_type A string specifying whether the value is an EDSS value
+#' or an MSFC value since event time is defined differently for these
+#' types of values.
+#' @param analysis_method A string specifying which analysis method to use. 
+#' @return A single number signifying the number of days from baseline of the event time. If the
+#' event did not occur, returns Inf. If it is not possible to compute the
+#' event time, returns NA. 
+compute_event_time <- function(visits, values, treatment, value_type="EDSS", analysis_method="primary") {
+    # the input vector treatment will just be a vector with n copies of
+    # the individual's treatment based on where n is the number of observations
+    # so, update the vector to just a single value
+    treatment <- treatment[1]
+
+    # get the version of visits and values with only the observed values
+    observed <- observed_visits_values(visits, values)
+
+    # update the visits and values to just observed values
+    visits <- observed[[1]]
+    values <- observed[[2]]
+
+    # if there is only one value or zero values in the vector, we cannot
+    # compute the event time
+    if (length(visits) <= 1) {
+        return(NA)
+    }
+
+    # first, if every observed value is missing, then we cannot compute the 
+    # event time
+    if (sum(is.na(values)) > 0) {
+        # if we enter this if statement, that means that
+        # we encounter missing values in the vector of values, which should
+        # not have any missing values because we removed all missing values
+
+        # thus, stop the program and return a fatal error
+        stop("Fatal error: For some patient, missing values were not removed.")
+
+        # return NA as a failsafe
+        return(NA)
+    }
+
+    # declare the threshold that needs to be reached for two consecutive
+    # visits that are at least 180 days apart
+    threshold <- determine_threshold(values[1], value_type)
+
+    # if value type is EDSS, round all values to the nearest 
+    # 0.5 since EDSS scores are always in increments of 0.5
+    if (value_type == "EDSS") {
+        values <- round(values / 0.5) * 0.5
+    }
+
+    # if a patient has exactly 2 visits, then their event time is infinity
+    # by default as it is impossible to confirm any disease progression
+    if (length(visits) == 2) {
+        return(Inf)
+    }
+
+    # get the visit date of the baseline visit, which is defined simply
+    # as the date of the first visit
+    baseline_visit <- visits[1]
+
+    # check if there was sustained disability progression as we have enough
+    # measurements to evaluate this
+    # iterate from the first non-baseline value to the second to last value
+    for (i in 2:(length(values)-1)) {
+        # check if two consecutive values are greater than or equal to the threshold
+        # AND the two visits are at least 180 days apart
+        if (values[i] >= threshold & values[i+1] >= threshold &
+            as.numeric(visits[i+1] - visits[i]) >= 180) {
+            # compute the number of days since the baseline visit
+            event_time <- as.numeric(visits[i] - baseline_visit)
+            return(event_time)
+        }
+    }
+
+    # if the for loop runs all the way through, then we did not find an
+    # event time, and return infinity for the event time
+    return(Inf)
+}
+
+# define a function for computing the censoring time
+#' Compute Censoring Time
+#' @param visits A vector containing the visit dates of the measurements
+#' @param values A vector containing the observed values
+#' @param event_time A vector containing copies of the event time for the patient.
+#' @param treatment A vector containing copies of the treatment value
+#' @param value_type A string specifying whether the value is an EDSS value
+#' or an MSFC value since event time is defined differently for these
+#' types of values.
+#' @param analysis_method A string specifying the analysis method to use
+#' for computing the event time.
+#' @return A single number signifying the number of days since baseline of the censoring time.
+compute_censoring_time <- function(visits, values, event_time, value_type="EDSS") {
+    # get the event time for this patient, which is just the first
+    # element of the vector event_time
+    event_time <- event_time[1]
+
+    # get the version of visits and values with only the observed values
+    observed <- observed_visits_values(visits, values)
+
+    # update the visits and values to just observed values
+    visits <- observed[[1]]
+    values <- observed[[2]]
+
+    # if there is only one visit, or less, then the censoring time will be 0 as
+    # this is the number of days since baseline that the patient is
+    # censored
+    if (length(visits) <= 1) {
+        return(0)
+    }
+
+    # get the baseline visit date
+    baseline_date <- visits[1]
+
+    # get the final visit date
+    final_date <- visits[length(visits)]
+
+    # get the second to last visit date
+    penultimate_date <- visits[length(visits)-1]
+
+    # initialize the censoring time variable
+    censoring_time <- 0
+
+    # if the event time is infinite, then the patient is censored
+    # at their final visit date or second to final visit date
+    # if the final measurement is above the threshold for
+    # disease progression
+    if (is.infinite(event_time)) {
+        # determine the threshold value
+        threshold <- determine_threshold(values[1], value_type)
+
+        # check if the final observed value is greater than or equal
+        # to the threshold
+        if (values[length(values)] >= threshold) {
+            # the final value progressed and we cannot confirm it, so
+            # patient is censored at the second to last visit
+            censoring_time <- as.numeric(penultimate_date - baseline_date)
+        } else {
+            # the final value did not progress, so the patient is censored
+            # at the final visit
+            censoring_time <- as.numeric(final_date - baseline_date)
+        }
+    } else {
+        # the event occurred, so the censoring time will just be
+        # the difference between the final visit date and the 
+        # baseline visit date
+        censoring_time <- as.numeric(final_date - baseline_date)
+    }
+    
+    return(censoring_time)
 }
 
