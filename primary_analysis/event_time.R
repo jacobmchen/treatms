@@ -15,27 +15,24 @@ args <- commandArgs(trailingOnly = TRUE)
 # first check that the user actually entered an argument, if not then
 # exit the program
 if (length(args) < 1) {
-    stop(paste(c("User did not supply argument for how to process event time.",
-         "Usage is: Rscript event_time.R \"primary\"",
-         "Possible options are \"primary\", \"A best, B worst\", \"A worst, B best\""), collapse="\n"))
+    stop(paste(c("User did not supply argument for how to process values of EDSS with an exception finding.",
+         "Usage is: Rscript event_time.R \"exclude exceptions\"",
+         "Possible options are \"exclude exceptions\", \"include exceptions\""), collapse="\n"))
 }
 
-analysis_options <- c("primary", "A best, B worst", "A worst, B best")
-analysis_method <- args[1]
+analysis_options <- c("exclude_exceptions", "include_exceptions")
+exceptions_flag <- args[1]
 
 # make sure that the user entered a valid imputation option
-if (!(analysis_method %in% analysis_options)) {
-    stop(paste(c("User did not input a valid option for computing event time.",
-                 "Possible options are \"primary\", \"A best, B worst\", \"A worst, B best\""), collapse="\n"))
+if (!(exceptions_flag %in% analysis_options)) {
+    stop(paste(c("User did not input a valid option for processing values of EDSS with exception finding",
+                 "Possible options are \"exclude exceptions\", \"include excpeitons\""), collapse="\n"))
 }
 
-# NOTE: the code for deciding event time has been moved to global_variables.R
+# NOTE: the function for deciding event time has been moved to global_variables.R
 
 # read the data for EDSS
 edss_data <- data.frame(read_excel(data_file_name, sheet="edss"))
-
-# read the data for censoring times, which was computed separately 
-censoring_times <- readRDS("censoring_times.RDS")
 
 # read the data for baseline characteristics, which was computed separately
 baseline_data <- readRDS("baseline_data_merge_states.RDS")
@@ -45,11 +42,6 @@ treatment_data <- readRDS("treatment_data.RDS")
 
 # keep a copy of all of the patients
 patients <- edss_data %>% select(PatientName) %>% distinct(PatientName)
-
-# get the censoring times for t25fw, nhpt
-# these censoring times are needed for imputation of MSFC values
-t25fw_censoring_time <- censoring_times %>% select(PatientName, t25fw_censor)
-hpt_censoring_time <- censoring_times %>% select(PatientName, hpt_censor)
 
 # read the imputed edss and pdds data from a saved file
 imputed_data <- readRDS("imputed_edss_pdds_data.RDS")

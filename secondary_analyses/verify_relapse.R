@@ -11,9 +11,9 @@ relapse_data_orig <- data.frame(read_excel(data_file_name, sheet="relapse"))
 
 data <- relapse_data_orig %>%
     # select only relevant columns
-    select(c(PatientName, FormGroup, visit_date, ra_new_symptoms, ra_onset_date)) %>%
+    select(c(PatientName, FormGroup, visit_date, ra_est_event, ra_onset_date)) %>%
     # get only patients with a confirmed relapse
-    filter(ra_new_symptoms == "Yes") %>%
+    filter(ra_est_event == "Exam-confirmed exacerbation") %>%
     # change the string "u/k" to a missing value
     mutate(ra_onset_date = ifelse(ra_onset_date == "u/k", NA, ra_onset_date)) %>%
     # change the string "n/a" to a missing value
@@ -26,9 +26,9 @@ data <- relapse_data_orig %>%
 
 data_missing <- relapse_data_orig %>%
     # select only relevant columns
-    select(c(PatientName, FormGroup, visit_date, ra_new_symptoms, ra_onset_date)) %>%
+    select(c(PatientName, FormGroup, visit_date, ra_est_event, ra_onset_date)) %>%
     # get only patients with a confirmed relapse
-    filter(ra_new_symptoms == "Yes") %>%
+    filter(ra_est_event == "Exam-confirmed exacerbation") %>%
     filter(is.na(ra_onset_date) | ra_onset_date == "u/k" | ra_onset_date == "n/a")
 
 data_missing %>% slice_head(n=10) %>% print()

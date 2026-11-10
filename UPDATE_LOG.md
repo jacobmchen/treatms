@@ -356,5 +356,11 @@ Summary of updates since most recent one:
 - Move the compute_event_time function to global variables because we now need to know whether a patient had an event time that is not infinity to know what their censoring time is.
 - Based on the new procedure for computing censoring time, we need to know an individual's event time to compute their censoring time. Thus, imputing values of EDSS or MSFC for the sensitivity analyses needs to happen first, before computing those metrics. For now, leave a note in the README not to run those imputation files. Need to clarify how to do imputation with the team later.
 - To prevent repeating computatioins for the event time, compute the event time then the censoring time.
+- Need to settle on how to impute values for the sensitivity analyses before writing code for event time and censoring time.
+- For now, just implement the "none" option, which means do not impute anything.
 
 - For ``secondary_analyses/verify_relapse.R``, changed the code for finding missing values to keep the original value of symptom onset date. There are three possibilities: NA, "u/k", or "n/a". NA means the data cell is blank. The other two options means those strings were in the data cell instead of date value.
+
+2026-11-10
+
+- Investigate the distribution of the number of days between visits across all observed EDSS values. This analysis will be contained in ``inter_visit_lengths.R``.

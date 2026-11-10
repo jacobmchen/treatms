@@ -5,8 +5,6 @@
 library(readxl)
 # package for operations on manipulating data
 library(tidyverse)
-# library for imputing missing values
-library(mice)
 
 source("global_variables.R")
 
@@ -16,18 +14,26 @@ args <- commandArgs(trailingOnly = TRUE)
 # first check that the user actually entered an argument, if not then
 # exit the program
 if (length(args) < 1) {
-    stop(paste(c("User did not supply argument for how to impute EDSS values.",
-         "Usage is: Rscript impute_edss_pdds.R \"mice\"",
-         "Possible imputation options are \"none\", \"mice\", \"A best, B worst\", \"A worst, B best\""), collapse="\n"))
+    stop(paste(c("User did not supply argument for how to impute values and whether to keep values of EDSS with exception finding.",
+         "Usage is: Rscript impute_edss_pdds.R \"none\" \"exclude exceptions\"",
+         "Possible imputation options are \"none\", \"A best, B worst\", \"A worst, B best\"",
+         "Possible options for handling EDSS excpetion findings are \"exclude exceptions\", \"include exceptions\""), collapse="\n"))
 }
 
-imputation_options <- c("none", "mice", "A best, B worst", "A worst, B best")
+imputation_options <- c("none", "A best, B worst", "A worst, B best")
 impute_method <- args[1]
+exception_options <- c("exclude exceptions", "include exceptions")
+exception_flag <- args[2]
 
 # make sure that the user entered a valid imputation option
 if (!(impute_method %in% imputation_options)) {
-    stop(paste(c("User did not input a valid imputation option for EDSS.",
-                 "Possible imputation options are \"none\", \"mice\", \"A best, B worst\", \"A worst, B best\""), collapse="\n"))
+    stop(paste(c("User did not input a valid imputation option.",
+                 "Possible imputation options are \"none\", \"A best, B worst\", \"A worst, B best\""), collapse="\n"))
+}
+# make sure that the user entered a valid option for how to handle EDSS exceptions
+if (!(exception_flag %in% exception_options)) {
+    stop(paste(c("User did not specify a valid option for dealing with EDSS exceptions.",
+                 "Possible options for handling EDSS exceptions are \"exclude exceptions\", \"include exceptions\""), collapse="\n"))
 }
 
 # read the data for EDSS
@@ -36,17 +42,67 @@ edss_data <- data.frame(read_excel(data_file_name, sheet="edss"))
 # read the data for PDDS
 pdds_data <- data.frame(read_excel(data_file_name, sheet="pdds"))
 
-# read the data for censoring times, which was computed separately 
-censoring_times <- readRDS("censoring_times.RDS")
-
 # read the data for baseline characteristics, which was computed separately
 baseline_data <- readRDS("baseline_data_merge_states.RDS")
 
 # read the treatment assignemnts
 treatment_data <- readRDS("treatment_data.RDS")
 
-# get the censoring times for EDSS
-edss_censoring_time <- censoring_times %>% select(PatientName, edss_censor)
+# prepare the PDDS data 
+pdds_data <- pdds_data %>%
+    # select only the columns for patient name, date that the patient
+    # completed the PDDS questionnaire, and the score itself
+    select(c(PatientName, completion_date, pdds_total_score)) %>%
+    # remove a patient that does not have an entry in baseline chars
+    filter(PatientName != "0256-013") %>%
+    # sort the patients by their completion date
+    arrange(PatientName, completion_date) %>%
+    # get rid of missing values for the pdds score
+    filter(!is.na(pdds_total_score)) %>%
+    # some patient names and months are duplicated, so just keep the first
+    # occurrence
+    distinct(PatientName, completion_date, .keep_all=TRUE)
+
+# check if we are ignoring values of EDSS with an exception finding, if so
+# keep only rows that do NOT have an exception finding
+if (exception_flag == "exclude exceptions") {
+    edss_data <- edss_data %>%
+        filter(fs_finding == "No")
+}
+
+# prepare the EDSS data
+edss_data <- edss_data %>%
+    # keep only patient name, visit_date, and edss score columns (including
+    # sub-functional system scores)
+    select(PatientName, visit_date, total_edss_score,
+           fs_cfss_total, fsvs_on_total, fs_bfss_total, total_pyramidal_score,
+           sensory_system_score_total, cerebellar_system_score_total, bowel_bladder_sys_score_total) %>%
+    # remove a patient that does not have an entry in baseline chars
+    filter(PatientName != "0256-013") %>%
+    # change every instance of Not Obtained to a missing value in the data
+    mutate(across(where(is.character), ~ na_if(.x, "Not Obtained"))) %>%
+    # this column is being read as a string because some rows in the column
+    # are strings, so cast it as a numeric
+    mutate(fsvs_on_total = as.numeric(fsvs_on_total)) %>%
+    # also cast this column as a numeric for the same reason as above
+    mutate(bowel_bladder_sys_score_total = as.numeric(bowel_bladder_sys_score_total)) 
+
+# add the list of patients we drop to the consort
+add_to_consort(c("0256-013"), 
+                "recorded in EDSS and PDDS, but not in baseline chars", "impute_edss_pdds.R")
+
+# if we are not imputing any values, then just save the pdds and edss dataframes
+# as RDS files directly
+if (impute_method == "none") {
+    saveRDS(pdds_data, file="imputed_pdds_data.RDS")
+    saveRDS(edss_data, file="imputed_edss_data.RDS")
+}
+
+q()
+
+###
+# Below is old code. Delete once we know how to impute these values.
+###
 
 # prepare pdds data to get it ready for imputation; this isn't closed
 # in a function since we only need to do it once for the PDDS data

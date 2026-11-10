@@ -61,6 +61,8 @@ edss_censoring_time %>% slice_head(n=10) %>% print()
 
 print(difftime(edss_censoring_time$visit_date[2], edss_censoring_time$visit_date[1], units="days"))
 
+# in progress, need to write code for event time first
+
 q()
 
     # replace Month with empty string then cast the string as an integer
