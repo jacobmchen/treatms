@@ -1,4 +1,4 @@
-# Summary of Procedure for Deciding Event Time
+# Summary of Procedure for Deciding Event and Censoring Time
 
 ## Definitions
 
@@ -64,3 +64,17 @@ Output: Censoring time is Month 12, and event time is infinity.
 Input: Vector of months (0, 6), vector of measurements (4, 5).
 Output: Censoring time is Month 0, and event time is infinity.
 
+## Procedure for Imputing Values for Sensitivity Analyses
+
+The following procedure for imputing EDSS, T25FW, and NHPT values applies only to the sensitivity analyses and will be the same regardless of the repeated outcome measure. Thus, we will define the procedure for EDSS, and it can be extended to the other outcome measures.
+
+1. Temporarily set aside measurements labeled "Interim Information".
+2. Let $\alpha$ be the month label of the first measurement and $\beta$ be the month label of the final measurement. By construction, $\alpha$ and $\beta$ will be multiples of 6.
+3. For each multiple of 6 between $\alpha$ and $\beta$ that has no measurement, create a new row with the corresponding month label. For each new row, we will need to impute a visit_date and an EDSS value.
+4. Consider a row that we need to impute the visit_date for. Let prev_date and next_date be the visit date of the previous and next observed measurements, respectively. Let prev_month and next_month be the month label of the previous and next observed measurements, respectively. Let cur_month be the month label of the current row. Impute the visit date as prev_date + (next_date - prev_date) * (cur_month/6 - prev_month/6) / (next_month/6 - prev_month/6).
+5. There are two choices of imputation methods for the actual value of EDSS: "A best, B worst" and "A worst, B best". For the first imputation option, impute all missing values of EDSS with the best possible value if treatment is 0 and the worst possible value otherwise. For the second, impute all missing values of EDSS with the worst possible value if treatment is 0 and the best possible value otherwise.
+6. Put the measurements labled "Interim Information" back into the data.
+
+Best and worst values of EDSS are 0 and 9.5.
+Best and worst values of T25FW are 0 and 80.
+Best and worst values of NHPT are 0 and 200.

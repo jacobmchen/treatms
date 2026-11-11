@@ -24,7 +24,7 @@ no_data_patient <- "0225-016"
 compute_average_msfc <- function(msfc_data) {
     msfc_data <- msfc_data %>%
         mutate(dominant_hand_t1_seconds = as.numeric(dominant_hand_t1_seconds)) %>%
-        mutate(dominant_hand_t2_seconds = as.numeric(dominant_hand_t1_seconds)) 
+        mutate(dominant_hand_t2_seconds = as.numeric(dominant_hand_t2_seconds)) 
 
     # all we need to do in this function is to create three additional columns
     # for the average of t25fw and nhpt for dom and non-dom hands
