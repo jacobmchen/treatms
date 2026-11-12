@@ -370,3 +370,8 @@ Summary of updates since most recent one:
 - We decided that the minimum number of days needed between visits in order for it to count as disease progression is 161 days. Save this in the global variables somewhere, and use that value in the analyses.
 - We decided on how to impute values for EDSS and MSFC. Look at the recorded six month intervals in the data and impute the missing 6 month intervals. We also need to impute the visit date, which should be the dates between the observed values, evenly spaced out. 
 - We don't need to impute PDDS for the primary analysis, so just impute EDSS in the file ``impute_edss.R``, which is the renamed version of ``impute_edss_pdds.R``.
+- Now working on updating ``impute_msfc.R``.
+
+2026-11-12
+
+- Finished updating the implementation for ``impute_msfc.R``.

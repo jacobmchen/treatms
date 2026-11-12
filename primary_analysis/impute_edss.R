@@ -70,19 +70,21 @@ edss_data <- edss_data %>%
     mutate(bowel_bladder_sys_score_total = as.numeric(bowel_bladder_sys_score_total)) %>%
     # change Interim Information value to Z so that it will appear after the month measurements;
     # this is so that when we drop duplicate visits, the month visits are kept
-    mutate(FormGroup = ifelse(FormGroup == "Interim Information", "Z", FormGroup)) %>%
+    mutate(FormGroup = if_else(FormGroup == "Interim Information", "Z", FormGroup)) %>%
     # sort by FormGroup
     arrange(PatientName, FormGroup) %>%
     # keep only measurements on different visit dates because there are duplicates
+    # technically, we are supposed to keep the month with the correct window, but this
+    # heuristic works for now (I manually checked)
     distinct(PatientName, visit_date, .keep_all=TRUE) %>%
     # change Z values back to Interim Information in FormGroup
-    mutate(FormGroup = ifelse(FormGroup == "Z", "Interim Information", FormGroup)) %>%
-    # sort by the visit date
-    arrange(visit_date)
+    mutate(FormGroup = if_else(FormGroup == "Z", "Interim Information", FormGroup)) %>%
+    # sort by patient name and the visit date
+    arrange(PatientName, visit_date)
 
 # add the list of patients we drop to the consort
 add_to_consort(c("0256-013"), 
-                "recorded in EDSS and PDDS, but not in baseline chars", "impute_edss_pdds.R")
+                "recorded in EDSS, but not in baseline chars", "impute_edss_pdds.R")
 
 # if we are not imputing any values, then just perform a couple more pre-processing steps
 # and save the edss data
@@ -93,81 +95,28 @@ if (impute_method == "none") {
 
     saveRDS(edss_data, file="imputed_edss_data.RDS")
 } else {
-    # get the interim visits in the edss data
-    interim_edss <- edss_data %>%
-        # keep only visits that are labeled interim information
-        filter(FormGroup == "Interim Information") %>%
-        # remove the form group column
-        select(-FormGroup)
-
-    # get the visits with month labels in the edss data and
-    # complete the sequence
-    regular_edss <- edss_data %>%
-        filter(FormGroup != "Interim Information") %>%
-        # convert the formgroup data to numbers
-        mutate(FormGroup = as.integer(gsub("\\D", "", FormGroup))) %>%
-        # group the data by patient name
-        group_by(PatientName) %>%
-        # complete the sequence of month measurements by 6 month intervals
-        complete(FormGroup=full_seq(FormGroup, 6)) %>%
-        # create 5 new columns that keep track of the row number (just the index),
-        # the previous recorded visit date, the next recorded visit date, the row
-        # number of the previously recorded visit date, and the row number of the 
-        # next recorded visit date
-        mutate(
-            row = row_number(),
-            # initilize as just the current visit date, even if it is NA
-            prev_date = visit_date,
-            # initalize as just the current visit date, even if it is NA
-            next_date = visit_date,
-            # the previous row number is the current row if visit_date is observed and
-            # NA if visit_date is not observed
-            prev_row = if_else(!is.na(visit_date), row, NA),
-            # the next row number is the current row if visit_date is observed and
-            # NA if visit_date is not observed
-            next_row = if_else(!is.na(visit_date), row, NA)
-        ) %>%
-        # fill in missing values of column prev_date and prev_row by using the last observed value 
-        fill(prev_date, prev_row, .direction = "down") %>%
-        # fill in missing values of column next_date and next_row using the the next observed value
-        fill(next_date, next_row, .direction = "up") %>%
-        # fill in the missing visit dates as the dates between the most recently observed and next
-        # observed value evenly spaced out
-        mutate(visit_date = if_else(is.na(visit_date),
-                                    as.Date( round( as.numeric(prev_date) / 86400 + (as.numeric(next_date) / 86400 - as.numeric(prev_date) / 86400) * (row-prev_row) / (next_row-prev_row) ) , origin = "1970-01-01" ),
-                                    visit_date)) %>%
-        # remove the columns we no longer need
-        select(-c(row, prev_date, next_date, prev_row, next_row, FormGroup))
+    # impute the visit dates for the edss data
+    edss_data <- impute_visit_dates(edss_data)
 
     # save the min and max values for EDSS
     edss_min <- 0
     edss_max <- 9.5
 
-    # combine the interim visits and regular visits back together
-    edss_data <- regular_edss %>%
-        # combine the month edss emasurements with the interim measurements
-        bind_rows(interim_edss) %>%
-        # sort by patient name and visit date
-        arrange(PatientName, visit_date) %>%
-        # merge the treatment data
-        left_join(treatment_data, by="PatientName")
+    # merge the treatment data
+    edss_data <- edss_data %>%
+        left_join(treatment_data, by="PatientName") 
 
     if (impute_method == "A best, B worst") {
         # impute missing values of edss as the minimum possible edss value if treatment is 0
         # and the maximum possible value of edss otherwise
         edss_data <- edss_data %>%
-            mutate(total_edss_score = ifelse(is.na(total_edss_score), ifelse(treatment_group == 0, edss_min, edss_max), total_edss_score))
+            mutate(total_edss_score = if_else(is.na(total_edss_score), if_else(treatment_group == 0, edss_min, edss_max), total_edss_score))
     } else if (impute_method == "A worst, B best") {
         # impute missing values of edss as the maximum possible edss value if treatment is 0
         # and the minimum possible value of edss otherwise
         edss_data <- edss_data %>%
-            mutate(total_edss_score = ifelse(is.na(total_edss_score), ifelse(treatment_group == 0, edss_max, edss_min), total_edss_score))
+            mutate(total_edss_score = if_else(is.na(total_edss_score), if_else(treatment_group == 0, edss_max, edss_min), total_edss_score))
     }
-
-    edss_data %>%
-        select(c(PatientName, visit_date, total_edss_score, treatment_group)) %>%
-        filter(PatientName == "0100-014") %>%
-        print(width=Inf)
 
     saveRDS(edss_data, file="imputed_edss_data.RDS")
 }

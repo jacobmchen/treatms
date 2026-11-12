@@ -35,7 +35,8 @@ compute_average_msfc <- function(msfc_data) {
 
     # exception handling for patient with incorecctly entered 0 values
     msfc_data <- msfc_data %>%
-        mutate(hand_average_seconds = ifelse(PatientName == "0216-012" & FormGroup == "Month 42", NA, hand_average_seconds))
+        mutate(hand_average_seconds = if_else(PatientName == "0216-012" & FormGroup == "Month 42", NA, hand_average_seconds)) %>%
+        mutate(hand_average_seconds = if_else(PatientName == "0402-011" & FormGroup == "Month 84", NA, hand_average_seconds))
 
     return(msfc_data)
 }
@@ -413,6 +414,73 @@ add_to_consort <- function(patients, reason, filename, no_exceptions=FALSE) {
     }
 
     # don't return anything
+}
+
+###
+# Below are functions for imputing values of the primary outcome for the
+# sensitivity analyses.
+###
+
+# create a function that takes a dataset of the repeated outcome measure,
+# decides which values need to be imputed based on the month intervals
+# not recorded, and imputes the visit dates; this function leaves the values
+# of the repeated outcomes unimputed
+impute_visit_dates <- function(data) {
+    # get the interim visits in the data
+    interim_data <- data %>%
+        # keep only visits that are labeled interim information
+        filter(FormGroup == "Interim Information") %>%
+        # remove the form group column
+        select(-FormGroup)
+
+    # get the visits with month labels in the data and
+    # complete the sequence
+    regular_data <- data %>%
+        filter(FormGroup != "Interim Information") %>%
+        # convert the formgroup data to numbers
+        mutate(FormGroup = as.integer(gsub("\\D", "", FormGroup))) %>%
+        # group the data by patient name
+        group_by(PatientName) %>%
+        # complete the sequence of month measurements by 6 month intervals
+        complete(FormGroup=full_seq(FormGroup, 6)) %>%
+        # create 5 new columns that keep track of the row number (just the index),
+        # the previous recorded visit date, the next recorded visit date, the row
+        # number of the previously recorded visit date, and the row number of the 
+        # next recorded visit date
+        mutate(
+            row = row_number(),
+            # initilize as just the current visit date, even if it is NA
+            prev_date = visit_date,
+            # initalize as just the current visit date, even if it is NA
+            next_date = visit_date,
+            # the previous row number is the current row if visit_date is observed and
+            # NA if visit_date is not observed
+            prev_row = if_else(!is.na(visit_date), row, NA),
+            # the next row number is the current row if visit_date is observed and
+            # NA if visit_date is not observed
+            next_row = if_else(!is.na(visit_date), row, NA)
+        ) %>%
+        # fill in missing values of column prev_date and prev_row by using the last observed value 
+        fill(prev_date, prev_row, .direction = "down") %>%
+        # fill in missing values of column next_date and next_row using the the next observed value
+        fill(next_date, next_row, .direction = "up") %>%
+        # fill in the missing visit dates as the dates between the most recently observed and next
+        # observed value evenly spaced out
+        mutate(visit_date = if_else(is.na(visit_date),
+                                    as.Date( round( as.numeric(prev_date) / 86400 + (as.numeric(next_date) / 86400 - as.numeric(prev_date) / 86400) * (row-prev_row) / (next_row-prev_row) ) , origin = "1970-01-01" ),
+                                    visit_date)) %>%
+        # remove the columns we no longer need
+        select(-c(row, prev_date, next_date, prev_row, next_row, FormGroup))
+
+    # combine the interim visits and regular visits back together
+    data <- regular_data %>%
+        # combine the month edss emasurements with the interim measurements
+        bind_rows(interim_data) %>%
+        # sort by patient name and visit date
+        arrange(PatientName, visit_date) 
+
+    # return the combined dataset
+    return(data)
 }
 
 ###
