@@ -378,4 +378,5 @@ Summary of updates since most recent one:
 - When imputing EDSS and MSFC for the sensitivity analyses, add an extra value at the very end with the best/worst values so that in case the final value is a progressing value it can be confirmed.
 - Now need to work on implementation for ``event_time.R``. Also changed the minimum interval needed for progression from 180 to 161 days.
 - Updated the implementations for ``event_time.R`` and ``compute_censoring_time.R``.
+- When running the actual RMST analysis, because the event and censoring times are in the units of days, there are roughly 3000 possible days. Meaning the outcome is a discrete variable with 3000 potential categories. With this many possible categories, the program crashes. Thus I round the number of days to the closest month by dividing by 30 then rounding to the nearest whole number.
 

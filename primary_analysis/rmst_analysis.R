@@ -50,19 +50,16 @@ tau <- 84
 # read the data
 data <- readRDS("full_data_merge_states.RDS")
 
+data <- data %>%
+    # divide the times by 30 to get the closest
+    mutate(censor = censor/30, event_time = event_time/30) %>%
+    # round to the nearest integer
+    mutate(censor = round(censor), event_time = round(event_time)) 
+
 # create long form data using the data with all clusters
 dlong_states <- create_dlong(data)
 
 print("RMST estimate for state clusters with exceptions")
-print(tmle(dlong_states, tau))
-
-# read the data with no exceptions
-data <- readRDS("full_data_merge_states_no_exceptions.RDS")
-
-# create long form data using the data with all clusters
-dlong_states <- create_dlong(data)
-
-print("RMST estimate for state clusters no exceptions")
 print(tmle(dlong_states, tau))
 
 # exit the program here if don't want to run experiments below
