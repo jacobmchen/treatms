@@ -114,7 +114,7 @@ if (impute_method == "none") {
         select(-FormGroup)
 
     # save the data to RDS
-    saveRDS(nhpt_data, file="t25fw_data.RDS")
+    saveRDS(nhpt_data, file="nhpt_data.RDS")
 } else {
     # impute the visit dates for the t25fw data
     t25fw_data <- impute_visit_dates(t25fw_data)
@@ -224,6 +224,6 @@ if (impute_method == "none") {
     saveRDS(t25fw_data, file="t25fw_data.RDS")
 
     # save the data to RDS
-    saveRDS(nhpt_data, file="t25fw_data.RDS")
+    saveRDS(nhpt_data, file="nhpt_data.RDs")
 }
 

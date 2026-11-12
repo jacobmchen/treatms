@@ -530,7 +530,7 @@ determine_threshold <- function(baseline_value, value_type="EDSS") {
         # includes T25FW and NHPT
 
         # the threshold value is 1.2 times the baseline value
-        threshold <- values[1] * 1.2
+        threshold <- baseline_value * 1.2
     }
 
     return(threshold)
@@ -540,20 +540,13 @@ determine_threshold <- function(baseline_value, value_type="EDSS") {
 #' Compute Event Time
 #' @param visits A vector containing the visit dates of the measurements
 #' @param values A vector containing the observed values of the outcome
-#' @param treatment A vector of copies of the treatment value
 #' @param value_type A string specifying whether the value is an EDSS value
 #' or an MSFC value since event time is defined differently for these
 #' types of values.
-#' @param analysis_method A string specifying which analysis method to use. 
 #' @return A single number signifying the number of days from baseline of the event time. If the
 #' event did not occur, returns Inf. If it is not possible to compute the
 #' event time, returns NA. 
-compute_event_time <- function(visits, values, treatment, value_type="EDSS", analysis_method="primary") {
-    # the input vector treatment will just be a vector with n copies of
-    # the individual's treatment based on where n is the number of observations
-    # so, update the vector to just a single value
-    treatment <- treatment[1]
-
+compute_event_time <- function(visits, values, value_type="EDSS") {
     # get the version of visits and values with only the observed values
     observed <- observed_visits_values(visits, values)
 
@@ -608,9 +601,9 @@ compute_event_time <- function(visits, values, treatment, value_type="EDSS", ana
         # check if two consecutive values are greater than or equal to the threshold
         # AND the two visits are at least 161 days apart
         if (values[i] >= threshold & values[i+1] >= threshold &
-            as.numeric(visits[i+1] - visits[i]) >= 161) {
+            as.numeric(visits[i+1])  / 86400 - as.numeric(visits[i]) / 86400 >= 161) {
             # compute the number of days since the baseline visit
-            event_time <- as.numeric(visits[i] - baseline_visit)
+            event_time <- as.numeric(visits[i]) / 86400 - as.numeric(baseline_visit) / 86400
             return(event_time)
         }
     }
@@ -676,17 +669,17 @@ compute_censoring_time <- function(visits, values, event_time, value_type="EDSS"
         if (values[length(values)] >= threshold) {
             # the final value progressed and we cannot confirm it, so
             # patient is censored at the second to last visit
-            censoring_time <- as.numeric(penultimate_date - baseline_date)
+            censoring_time <- as.numeric(penultimate_date) / 86400 - as.numeric(baseline_date) / 86400
         } else {
             # the final value did not progress, so the patient is censored
             # at the final visit
-            censoring_time <- as.numeric(final_date - baseline_date)
+            censoring_time <- as.numeric(final_date) / 86400 - as.numeric(baseline_date) / 86400
         }
     } else {
         # the event occurred, so the censoring time will just be
         # the difference between the final visit date and the 
         # baseline visit date
-        censoring_time <- as.numeric(final_date - baseline_date)
+        censoring_time <- as.numeric(final_date) / 86400 - as.numeric(baseline_date) / 86400
     }
     
     return(censoring_time)

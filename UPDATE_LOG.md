@@ -377,4 +377,5 @@ Summary of updates since most recent one:
 - Finished updating the implementation for ``impute_msfc.R``.
 - When imputing EDSS and MSFC for the sensitivity analyses, add an extra value at the very end with the best/worst values so that in case the final value is a progressing value it can be confirmed.
 - Now need to work on implementation for ``event_time.R``. Also changed the minimum interval needed for progression from 180 to 161 days.
+- Updated the implementations for ``event_time.R`` and ``compute_censoring_time.R``.
 
