@@ -93,6 +93,7 @@ if (impute_method == "none") {
         # remove the form group column
         select(-FormGroup)
 
+    # save data to an RDS file
     saveRDS(edss_data, file="imputed_edss_data.RDS")
 } else {
     # impute the visit dates for the edss data
@@ -111,13 +112,44 @@ if (impute_method == "none") {
         # and the maximum possible value of edss otherwise
         edss_data <- edss_data %>%
             mutate(total_edss_score = if_else(is.na(total_edss_score), if_else(treatment_group == 0, edss_min, edss_max), total_edss_score))
+
+        # for each patient, create an extra row with the visit date 161 days after and the
+        # best/worst value
+        extra_visit <- edss_data %>%
+            # keep only the most recent visit for each patient
+            slice_max(visit_date, n=1) %>%
+            mutate(
+                # change the edss score to the best/worst value depending on the treatment
+                # group
+                total_edss_score = if_else(treatment_group == 0, edss_min, edss_max),
+                # update the visit date to be 161 days after the most recent visit date
+                visit_date = visit_date + 161*60*60*24
+            )
     } else if (impute_method == "A worst, B best") {
         # impute missing values of edss as the maximum possible edss value if treatment is 0
         # and the minimum possible value of edss otherwise
         edss_data <- edss_data %>%
             mutate(total_edss_score = if_else(is.na(total_edss_score), if_else(treatment_group == 0, edss_max, edss_min), total_edss_score))
+
+        # for each patient, create an extra row with the visit date 161 days after and the
+        # best/worst value
+        extra_visit <- edss_data %>%
+            # keep only the most recent visit for each patient
+            slice_max(visit_date, n=1) %>%
+            mutate(
+                # change the edss score to the best/worst value depending on the treatment
+                # group
+                total_edss_score = if_else(treatment_group == 0, edss_max, edss_min),
+                # update the visit date to be 161 days after the most recent visit date
+                visit_date = visit_date + 161*60*60*24
+            )
     }
 
+    # combine the rows of the edss data with the extra visits
+    edss_data <- edss_data %>%
+        bind_rows(extra_visit) 
+
+    # save data to an RDS file
     saveRDS(edss_data, file="imputed_edss_data.RDS")
 }
 

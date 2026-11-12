@@ -3,7 +3,7 @@
 ## Definitions
 
 - Baseline date: The earleist visit date for a particular patient.
-- Sustained disabiltiy progression: Let $\gamma$ be some threshold above which we consider a patient to have progressed. Sustained disability progression is defined as a visit where a value above $\gamma$ is observed AND a subsequent visit at least 180 days later also observes a value above $\gamma$.
+- Sustained disabiltiy progression: Let $\gamma$ be some threshold above which we consider a patient to have progressed. Sustained disability progression is defined as a visit where a value above $\gamma$ is observed AND a subsequent visit at least 161 days later also observes a value above $\gamma$.
 - Censoring time: The time (in days from baseline) at which the participant is last observed in the study.
 - Event time: The time (in days from baseline) at which a participant is first observed to experience sustained disability progression. An event time of infinity means that the event did not occur for a participant.
 
@@ -74,6 +74,7 @@ The following procedure for imputing EDSS, T25FW, and NHPT values applies only t
 4. Consider a row that we need to impute the visit_date for. Let prev_date and next_date be the visit date of the previous and next observed measurements, respectively. Let prev_month and next_month be the month label of the previous and next observed measurements, respectively. Let cur_month be the month label of the current row. Impute the visit date as prev_date + (next_date - prev_date) * (cur_month/6 - prev_month/6) / (next_month/6 - prev_month/6).
 5. There are two choices of imputation methods for the actual value of EDSS: "A best, B worst" and "A worst, B best". For the first imputation option, impute all missing values of EDSS with the best possible value if treatment is 0 and the worst possible value otherwise. For the second, impute all missing values of EDSS with the worst possible value if treatment is 0 and the best possible value otherwise.
 6. Put the measurements labled "Interim Information" back into the data.
+7. For each patient, add an additional measurement of EDSS with the best/worst possible value depending on the treatment group and visit date 161 days after the most recently observed measurement. This is so that if the final measurement is elevated it will still count as sustained disability progression in the sensitivity analysis.
 
 Best and worst values of EDSS are 0 and 9.5.
 Best and worst values of T25FW are 0 and 80.

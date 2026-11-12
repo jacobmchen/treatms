@@ -582,7 +582,7 @@ compute_event_time <- function(visits, values, treatment, value_type="EDSS", ana
     }
 
     # declare the threshold that needs to be reached for two consecutive
-    # visits that are at least 180 days apart
+    # visits that are at least 161 days apart
     threshold <- determine_threshold(values[1], value_type)
 
     # if value type is EDSS, round all values to the nearest 
@@ -606,9 +606,9 @@ compute_event_time <- function(visits, values, treatment, value_type="EDSS", ana
     # iterate from the first non-baseline value to the second to last value
     for (i in 2:(length(values)-1)) {
         # check if two consecutive values are greater than or equal to the threshold
-        # AND the two visits are at least 180 days apart
+        # AND the two visits are at least 161 days apart
         if (values[i] >= threshold & values[i+1] >= threshold &
-            as.numeric(visits[i+1] - visits[i]) >= 180) {
+            as.numeric(visits[i+1] - visits[i]) >= 161) {
             # compute the number of days since the baseline visit
             event_time <- as.numeric(visits[i] - baseline_visit)
             return(event_time)

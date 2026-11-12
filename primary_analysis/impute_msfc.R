@@ -144,21 +144,81 @@ if (impute_method == "none") {
         t25fw_data <- t25fw_data %>%
             mutate(trial_average_seconds = if_else(is.na(trial_average_seconds), if_else(treatment_group == 0, t25fw_min, t25fw_max), trial_average_seconds))
 
+        # for each patient, create an extra row with the visit date 161 days after and the
+        # best/worst value
+        extra_visit_t25fw <- t25fw_data %>%
+            # keep only the most recent visit for each patient
+            slice_max(visit_date, n=1) %>%
+            mutate(
+                # change the t25fw to the best/worst value depending on the treatment
+                # group
+                trial_average_seconds = if_else(treatment_group == 0, t25fw_min, t25fw_max),
+                # update the visit date to be 161 days after the most recent visit date
+                visit_date = visit_date + 161*60*60*24
+            )
+
         # impute missing values of nhpt as the minimum possible nhpt value if treatment is 0
         # and the maximum possible value of nhpt otherwise
         nhpt_data <- nhpt_data %>%
             mutate(hand_average_seconds = if_else(is.na(hand_average_seconds), if_else(treatment_group == 0, nhpt_min, nhpt_max), hand_average_seconds))
+
+        # for each patient, create an extra row with the visit date 161 days after and the
+        # best/worst value
+        extra_visit_nhpt <- nhpt_data %>%
+            # keep only the most recent visit for each patient
+            slice_max(visit_date, n=1) %>%
+            mutate(
+                # change the nhpt to the best/worst value depending on the treatment
+                # group
+                hand_average_seconds = if_else(treatment_group == 0, nhpt_min, nhpt_max),
+                # update the visit date to be 161 days after the most recent visit date
+                visit_date = visit_date + 161*60*60*24
+            )
     } else if (impute_method == "A worst, B best") {
         # impute missing values of t25fw as the maximum possible t25fw value if treatment is 0
         # and the minimum possible value of t25fw otherwise
         t25fw_data <- t25fw_data %>%
             mutate(trial_average_seconds = if_else(is.na(trial_average_seconds), if_else(treatment_group == 0, t25fw_max, t25fw_min), trial_average_seconds))
 
+        # for each patient, create an extra row with the visit date 161 days after and the
+        # best/worst value
+        extra_visit_t25fw <- t25fw_data %>%
+            # keep only the most recent visit for each patient
+            slice_max(visit_date, n=1) %>%
+            mutate(
+                # change the t25fw to the best/worst value depending on the treatment
+                # group
+                trial_average_seconds = if_else(treatment_group == 0, t25fw_max, t25fw_min),
+                # update the visit date to be 161 days after the most recent visit date
+                visit_date = visit_date + 161*60*60*24
+            )
+
         # impute missing values of nhpt as the maximum possible nhpt value if treatment is 0
         # and the minimum possible value of nhpt otherwise
         nhpt_data <- nhpt_data %>%
             mutate(hand_average_seconds = if_else(is.na(hand_average_seconds), if_else(treatment_group == 0, nhpt_max, nhpt_min), hand_average_seconds))
+
+        # for each patient, create an extra row with the visit date 161 days after and the
+        # best/worst value
+        extra_visit_nhpt <- nhpt_data %>%
+            # keep only the most recent visit for each patient
+            slice_max(visit_date, n=1) %>%
+            mutate(
+                # change the nhpt to the best/worst value depending on the treatment
+                # group
+                hand_average_seconds = if_else(treatment_group == 0, nhpt_max, nhpt_min),
+                # update the visit date to be 161 days after the most recent visit date
+                visit_date = visit_date + 161*60*60*24
+            )
     }
+
+    # combine the rows of the t25fw data with the extra visits
+    t25fw_data <- t25fw_data %>%
+        bind_rows(extra_visit_t25fw) 
+
+    # combine the rows of the nhpt data with the extra visits
+    nhpt_data <- nhpt_data %>%
+        bind_rows(extra_visit_nhpt) 
 
     # save the data to RDS
     saveRDS(t25fw_data, file="t25fw_data.RDS")
