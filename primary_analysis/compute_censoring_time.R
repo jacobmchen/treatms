@@ -92,3 +92,6 @@ censor %>% slice_head(n=10) %>% print()
 # save the censoring times as a file
 saveRDS(censor, file="censoring_times.RDS")
 
+# save the censoring time as a csv file as well
+write.csv(censor, "censoring_times.csv", row.names=FALSE)
+

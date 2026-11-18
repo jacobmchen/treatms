@@ -125,6 +125,10 @@ baseline_data <- data.frame(read_excel(data_file_name, sheet="baseline chars"))
 
 # remove this patient since we have no data for them 
 baseline_data <- baseline_data %>%
+    # rename the column patient_id to PatientName
+    rename(PatientName = patient_id) %>%
+    # rename the column site_full_name to SiteName
+    rename(SiteName = site_full_name) %>%
     filter(PatientName != no_data_patient)
 
 # add the no_data_patient to the consort

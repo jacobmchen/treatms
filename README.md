@@ -14,8 +14,8 @@ The code for data pre-processing and implementation of the restricted mean survi
     - "A best, B worst": Replace imputed values of EDSS by 0.0 if treatment is A and 9.5 if treatment is B.
     - "A worst, B best": Replace imputed values of EDSS by 9.5 if treatment is A and 0.0 if treatment is B.
 
-Note that it is necessary to re-run the entire analysis with these different options to see the results of the RMST analysis with the different imputation options.
-The user must also specify whether to include measurements of EDSS with exception findings. The options are as follows:
+    Note that it is necessary to re-run the entire analysis with these different options to see the results of the RMST analysis with the different imputation options.
+    The user must also specify whether to include measurements of EDSS with exception findings. The options are as follows:
     - "exclude exceptions": Do not include any values of EDSS with an exception finding.
     - "include exceptions": Include values of EDSS with an exception finding.
 - The file ``impute_msfc.R`` imputes MSFC values for every time point in the study and saves the imputed data into .RDS files for future use. Like above, the user can specify how the imputation happens. The imputation options are the same as above. For t25fw best case values are 0, and worst case values are 80. For nhpt best case values are 0, and worst case values are 200.
