@@ -9,15 +9,24 @@ source("global_variables.R")
 # import package for tibble manipulations
 library(tidyverse)
 
-# declare a function that creates the long form dataset
-# needed for the RMST analysis
-# NOTE: this function's implementation is moved to global_variables.R
-# create_dlong <- function(data) {
-#
-# }
+# read the user input data that specifies the restriction time
+args <- commandArgs(trailingOnly = TRUE)
 
-# set the restriction time at 84 months
-tau <- 84
+# first check that the user actually entered an argument, if not then
+# exit the program
+if (length(args) < 1) {
+    stop(paste(c("User did not supply argument for the restriction time of interest.",
+         "Usage is: Rscript rmst_analysis.R 84",
+         "The restriction time must be greater than 0."), collapse="\n"))
+}
+
+tau <- as.numeric(args[1])
+
+# make sure that the user entered a valid restriction time
+if (tau < 0) {
+    stop(paste(c("User did not input a restriction time.",
+                 "The restriction time must be greater than 0."), collapse="\n"))
+}
 
 # # read the data
 # data <- readRDS("full_data_all_clusters.RDS")
@@ -56,11 +65,24 @@ data <- data %>%
     # round to the nearest integer
     mutate(censor = round(censor), event_time = round(event_time)) 
 
+print("the maximum censoring time of the observed data")
+print(max(data$censor))
+
 # create long form data using the data with all clusters
 dlong_states <- create_dlong(data)
 
 print("RMST estimate for state clusters with exceptions")
-print(tmle(dlong_states, tau))
+output <- tmle(dlong_states, tau)
+
+print("RMST estimates for treatment 0 and treatment 1")
+print(paste(output$theta[1], output$theta[2]))
+
+diff <- output$theta[2] - output$theta[1]
+print("difference in RMST estimates")
+print(diff)
+
+print("95% confidence intervals")
+print(c(diff - 1.96*output$sdn, diff + 1.96*output$sdn))
 
 # exit the program here if don't want to run experiments below
 q()

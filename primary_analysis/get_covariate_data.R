@@ -143,17 +143,27 @@ add_to_consort(c(no_data_patient),
 
 # set seed for generating treatment groups
 set.seed(0)
+#
+# # generate the treatment variable randomly
+# # once masking is removed, replace this with the actual treatment data
+# treatment_assignment <- rbinom(nrow(baseline_data), 1, 0.5)
+#
+# # get a dataframe with just the patient name and the randomly generated treatment
+# # group
+# treatment_data <- baseline_data %>% mutate(treatment_group = treatment_assignment) %>%
+#     select(c(PatientName, treatment_group))
+#
 
-# generate the treatment variable randomly
-# once masking is removed, replace this with the actual treatment data
-treatment_assignment <- rbinom(nrow(baseline_data), 1, 0.5)
+treatment_data <- baseline_data %>%
+    # select only patient name and treatment group data
+    select(c(PatientName, treatment_group)) %>%
+    # change A to treatment 0 and B to treatment 1
+    mutate(treatment_group = ifelse(treatment_group == "A", 0, treatment_group)) %>%
+    mutate(treatment_group = ifelse(treatment_group == "B", 1, treatment_group)) %>%
+    # cast the data type to a numeric because mutate maintains data type
+    mutate(treatment_group = as.numeric(treatment_group))
 
-# get a dataframe with just the patient name and the randomly generated treatment
-# group
-treatment_data <- baseline_data %>% mutate(treatment_group = treatment_assignment) %>%
-    select(c(PatientName, treatment_group))
-
-# save the treatment assignments as an RDS file
+# save the treatment assignments as an RDS file for use in other files
 saveRDS(treatment_data, file="treatment_data.RDS")
 
 
